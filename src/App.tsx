@@ -2120,6 +2120,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                     {Array.from({ length: size }).map((_, rIdx) => (
                       Array.from({ length: size }).map((_, cIdx) => {
                         const tileId = Object.keys(placedTiles).find(k => placedTiles[k]?.r === rIdx && placedTiles[k]?.c === cIdx);
+                        const isIncorrect = incorrectCells.some(cell => cell.r === rIdx && cell.c === cIdx);
                         
                         return (
                           <div 
@@ -2144,7 +2145,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                                 setSelectedTileForMove(tileId);
                               }
                             }}
-                            className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center relative transition-colors border-b border-r border-ink/10 bg-parchment hover:bg-parchment-dark ${selectedTileForMove && !tileId ? 'cursor-pointer hover:bg-crimson/5' : ''}`}
+                            className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center relative transition-colors border-b border-r border-ink/10 bg-parchment hover:bg-parchment-dark ${selectedTileForMove && !tileId ? 'cursor-pointer hover:bg-crimson/5' : ''} ${isIncorrect ? 'ring-2 ring-red-500 z-30' : ''}`}
                           >
                             <div className="absolute inset-1 border border-ink/5 pointer-events-none"></div>
                             {tileId ? (
@@ -2287,6 +2288,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
   const [bottomTab, setBottomTab] = useState<'tiles' | 'clues' | 'story'>('tiles');
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [incorrectCells, setIncorrectCells] = useState<{r: number, c: number}[]>([]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -2326,6 +2328,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
     setIsPencilMode(false);
     setTimer(0);
     setIsTimerRunning(false);
+    setIncorrectCells([]);
   }, [puzzle, selectedTier, itemLabels, secretRooms, size]);
 
   const isSolved = React.useMemo(() => {
@@ -2350,10 +2353,37 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
   }, [puzzle, placedTiles, size]);
 
   const handleCheckSolution = () => {
-    if (isSolved) {
+    const errors: {r: number, c: number}[] = [];
+    let isPerfect = true;
+
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const cell = puzzle.grid[r][c];
+        const tileId = Object.keys(placedTiles).find(k => placedTiles[k]?.r === r && placedTiles[k]?.c === c);
+        
+        let isCellCorrect = true;
+        if (cell.b) {
+          if (!tileId || !tileId.startsWith('blocker-')) isCellCorrect = false;
+        } else if (cell.i) {
+          if (tileId !== cell.i) isCellCorrect = false;
+        } else if (cell.n) {
+          if (tileId !== `number-${cell.n}`) isCellCorrect = false;
+        } else {
+          if (tileId) isCellCorrect = false;
+        }
+        
+        if (!isCellCorrect) {
+          errors.push({r, c});
+          isPerfect = false;
+        }
+      }
+    }
+
+    if (isPerfect) {
       setCheckStatus('correct');
       setIsTimerRunning(false);
       setIsHintMode(false);
+      setIncorrectCells([]);
       confetti({
         particleCount: 150,
         spread: 70,
@@ -2362,6 +2392,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
       });
     } else {
       setCheckStatus('incorrect');
+      setIncorrectCells(errors);
       setTimeout(() => setCheckStatus('idle'), 3000);
     }
   };
@@ -2371,6 +2402,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
       setIsTimerRunning(true);
     }
     setCheckStatus('idle');
+    setIncorrectCells([]);
     
     if (isHintMode) {
       if (r !== null && c !== null) {
