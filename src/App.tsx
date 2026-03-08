@@ -289,7 +289,7 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
         "Blockers (Secret Rooms) can never be entered.",
         "Relics must be collected in the exact order given.",
         "Dead End Rule: Any room with only one open neighbor (that isn't the start or end) must be a Secret Room, otherwise the Serpent would get trapped!",
-        "Elimination Rule: If a row has exactly X secret rooms and you find X blockers, mark the rest as Safe (No Blocker)."
+        "Elimination Rule: If a row has exactly X secret rooms and you find X secret rooms, mark the rest as Safe (No Secret Room)."
       ],
       instruction: "These rules apply to every archive.",
       board: [
@@ -464,7 +464,7 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
                           
                           {cellData.type === 'torii' && <MapPin className="w-8 h-8 text-[#d4af37]" />}
                           {cellData.type === 'passage' && <DoorOpen className="w-8 h-8 text-[#d4af37]" />}
-                          {cellData.type === 'blocker' && <span className="text-xl font-mono text-white/30 font-bold">b</span>}
+                          {cellData.type === 'blocker' && <span className="text-xl font-mono text-white/30 font-bold">S</span>}
                           {cellData.type === 'relic' && (
                             <>
                               {cellData.item === 'Lantern' && <Flame className="w-6 h-6 text-[#d4af37] mb-1" />}
@@ -858,7 +858,7 @@ function GridMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
           <div class="elements-grid">
             <div class="element-box"><strong>[ T ]</strong><br>Torii (Start)</div>
             <div class="element-box"><strong>[ P ]</strong><br>Passage (End)</div>
-            <div class="element-box"><strong>[ X ]</strong><br>${secretRooms} Blockers</div>
+            <div class="element-box"><strong>[ X ]</strong><br>${secretRooms} Secret Rooms</div>
             ${itemLabels.slice(0, selectedTier.items).map((item: string, idx: number) => `<div class="element-box"><strong>[ ${idx + 1} ]</strong><br>${item}</div>`).join('')}
           </div>
         </div>
@@ -887,10 +887,10 @@ function GridMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
             <li>The path moves orthogonally (no diagonals).</li>
             <li>The path cannot cross itself, overlap, or branch.</li>
             <li>Every open room must be visited exactly once.</li>
-            <li>Blockers (Secret Rooms) can never be entered.</li>
+            <li>Secret Rooms can never be entered.</li>
             <li>Relics must be collected in the exact order given in the story.</li>
             <li><strong>Dead End Rule:</strong> Any room with only one open neighbor (that isn't the start or end) must be a Secret Room, otherwise the Serpent would get trapped!</li>
-            <li><strong>Elimination Rule:</strong> If a row has exactly X secret rooms and you find X blockers, mark the rest as Safe (No Blocker).</li>
+            <li><strong>Elimination Rule:</strong> If a row has exactly X secret rooms and you find X secret rooms, mark the rest as Safe (No Secret Room).</li>
           </ul>
         </div>
       </body>
@@ -1032,14 +1032,14 @@ function GridMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                           {/* Secret Room Blocker */}
                           {showBlocker && (
                             <div className="w-8 h-8 rounded-sm bg-ink/20 flex items-center justify-center">
-                              <span className="text-[10px] font-mono text-ink/40 font-bold">b</span>
+                              <span className="text-[10px] font-mono text-ink/40 font-bold">S</span>
                             </div>
                           )}
 
                           {/* Maybe Blocker (Pencil) */}
                           {cell.maybeBlocker && cell.state === 'unknown' && (
                             <div className="absolute top-0 right-0 p-0.5 opacity-60">
-                              <span className="text-[10px] font-mono text-ink/60 font-bold italic">b</span>
+                              <span className="text-[10px] font-mono text-ink/60 font-bold italic">S</span>
                             </div>
                           )}
 
@@ -1719,6 +1719,8 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
   const [isPencilMode, setIsPencilMode] = useState(false);
   const [isHintMode, setIsHintMode] = useState(false);
   const [hintFeedback, setHintFeedback] = useState<{id: string, status: 'correct' | 'incorrect'} | null>(null);
+  const [highlightedCell, setHighlightedCell] = useState<{r: number, c: number} | null>(null);
+  const [incorrectCells, setIncorrectCells] = useState<{r: number, c: number}[]>([]);
   const [pencilMarks, setPencilMarks] = useState<Record<string, string[]>>({});
   const [selectedTileForMove, setSelectedTileForMove] = useState<string | null>(null);
   const [timer, setTimer] = useState(0);
@@ -1760,8 +1762,10 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
     setCheckStatus('idle');
     setPencilMarks({});
     setIsPencilMode(false);
+    setHighlightedCell(null);
     setTimer(0);
     setIsTimerRunning(false);
+    setIncorrectCells([]);
   }, [puzzle, selectedTier, itemLabels, secretRooms, size]);
 
   const isSolved = React.useMemo(() => {
@@ -1785,20 +1789,75 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
     return true;
   }, [puzzle, placedTiles, size]);
 
+  const handleHint = () => {
+    if (selectedTileForMove) {
+      const correctPos = puzzle?.solution[selectedTileForMove];
+      if (correctPos) {
+        setHighlightedCell(correctPos);
+        setTimer(prev => prev + 60); // Penalty
+        setTimeout(() => setHighlightedCell(null), 3000);
+      }
+    } else {
+      setIsHintMode(!isHintMode);
+      if (!isHintMode) setIsPencilMode(false);
+    }
+  };
+
   const handleCheckSolution = () => {
-    if (isSolved) {
+    const errors: {r: number, c: number}[] = [];
+    let isPerfect = true;
+    let isComplete = true;
+
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const cell = puzzle.grid[r][c];
+        const tileId = Object.keys(placedTiles).find(k => placedTiles[k]?.r === r && placedTiles[k]?.c === c);
+        
+        // Check for completeness
+        if (cell.b || cell.i || cell.n) {
+          if (!tileId) isComplete = false;
+        }
+
+        // Only check correctness if a tile is placed
+        if (tileId) {
+          let isCellCorrect = true;
+          if (cell.b) {
+            if (!tileId.startsWith('blocker-')) isCellCorrect = false;
+          } else if (cell.i) {
+            if (tileId !== cell.i) isCellCorrect = false;
+          } else if (cell.n) {
+            if (tileId !== `number-${cell.n}`) isCellCorrect = false;
+          } else {
+            // Tile placed where it shouldn't be
+            isCellCorrect = false;
+          }
+          
+          if (!isCellCorrect) {
+            errors.push({r, c});
+            isPerfect = false;
+          }
+        }
+      }
+    }
+
+    if (isPerfect && isComplete) {
       setCheckStatus('correct');
       setIsTimerRunning(false);
       setIsHintMode(false);
+      setIncorrectCells([]);
       confetti({
         particleCount: 150,
         spread: 70,
         origin: { y: 0.6 },
         colors: ['#D93838', '#D4AF37', '#141414', '#E4E3E0']
       });
-    } else {
+    } else if (errors.length > 0) {
       setCheckStatus('incorrect');
+      setIncorrectCells(errors);
       setTimeout(() => setCheckStatus('idle'), 3000);
+    } else {
+      setCheckStatus('idle');
+      setIncorrectCells([]);
     }
   };
 
@@ -1807,6 +1866,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
       setIsTimerRunning(true);
     }
     setCheckStatus('idle');
+    setIncorrectCells([]);
     
     if (isHintMode) {
       if (r !== null && c !== null) {
@@ -1899,7 +1959,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
           }}
           className={`w-full h-full rounded-sm bg-ink/80 flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md border ${selectedTileForMove === tileId ? 'border-crimson ring-2 ring-crimson/50' : 'border-ink'} ${opacityClass} relative overflow-hidden`}
         >
-          <span className="text-[12px] font-mono text-parchment/60 font-bold">b</span>
+          <span className="text-[12px] font-mono text-parchment/60 font-bold">S</span>
           {hintOverlay}
         </div>
       );
@@ -1947,8 +2007,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
         className={`w-full h-full flex flex-col items-center justify-center bg-parchment cursor-grab active:cursor-grabbing shadow-md border ${selectedTileForMove === tileId ? 'border-crimson ring-2 ring-crimson/50' : 'border-gold/40'} relative overflow-hidden ${opacityClass}`}
       >
         <div className="absolute inset-1 border border-gold/20 pointer-events-none"></div>
-        <Icon className={`w-4 h-4 md:w-5 md:h-5 ${colorClass} mb-0.5 md:mb-1`} />
-        <span className="text-[6px] md:text-[8px] font-bold uppercase tracking-widest text-ink/70 truncate w-full text-center px-1">{name}</span>
+        <Icon className={`w-6 h-6 md:w-8 md:h-8 ${colorClass}`} />
         {hintOverlay}
       </div>
     );
@@ -1958,6 +2017,11 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
     <div className="h-full flex flex-col relative">
       <header className="px-4 md:px-8 py-4 md:py-6 border-b border-ink/10 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-parchment/80 sticky top-0 z-10 backdrop-blur-md">
         <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Hexagon className="w-5 h-5 text-crimson" />
+            <span className="font-serif font-bold text-lg tracking-tight text-ink">KIRO</span>
+            <span className="text-[10px] bg-ink/5 px-1.5 py-0.5 rounded text-ink/40 font-mono">v1.5</span>
+          </div>
           <h2 className="font-serif text-2xl md:text-3xl font-semibold text-ink flex flex-wrap items-center gap-2 md:gap-4">
             Play Mission
             <div className="flex items-center gap-2 bg-ink/5 px-2 py-1 md:px-3 md:py-1.5 rounded-sm border border-ink/10 text-sm md:text-base font-sans font-normal">
@@ -1984,10 +2048,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
         </div>
         <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
           <button 
-            onClick={() => {
-              setIsHintMode(!isHintMode);
-              if (!isHintMode) setIsPencilMode(false);
-            }}
+            onClick={handleHint}
             className={`flex-1 md:flex-none justify-center flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 border rounded-sm text-xs md:text-sm font-medium transition-colors ${
               isHintMode 
                 ? 'bg-gold text-ink border-gold shadow-inner ring-2 ring-gold/50' 
@@ -2019,12 +2080,12 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
               checkStatus === 'correct' 
                 ? 'bg-emerald-500 text-white border-emerald-600' 
                 : checkStatus === 'incorrect'
-                ? 'bg-red-500 text-white border-red-600 animate-pulse'
+                ? 'bg-crimson text-white border-crimson-dark animate-pulse'
                 : 'bg-ink text-parchment hover:bg-ink-dark border-ink'
             }`}
           >
-            {checkStatus === 'correct' ? <CheckCircle2 className="w-3 h-3 md:w-4 md:h-4" /> : checkStatus === 'incorrect' ? <XCircle className="w-3 h-3 md:w-4 md:h-4" /> : <ListChecks className="w-3 h-3 md:w-4 md:h-4" />}
-            {checkStatus === 'correct' ? 'Correct!' : checkStatus === 'incorrect' ? 'Incorrect' : <span className="hidden sm:inline">Check Solution</span>}
+            {checkStatus === 'correct' ? <Sparkles className="w-4 h-4 md:w-5 md:h-5" /> : checkStatus === 'incorrect' ? <XCircle className="w-3 h-3 md:w-4 md:h-4" /> : <ListChecks className="w-3 h-3 md:w-4 md:h-4" />}
+            {checkStatus === 'correct' ? 'Path Clear!' : checkStatus === 'incorrect' ? 'Incorrect' : <span className="hidden sm:inline">Check Solution</span>}
             {checkStatus === 'idle' && <span className="sm:hidden">Check</span>}
           </button>
           <button 
@@ -2121,6 +2182,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                       Array.from({ length: size }).map((_, cIdx) => {
                         const tileId = Object.keys(placedTiles).find(k => placedTiles[k]?.r === rIdx && placedTiles[k]?.c === cIdx);
                         const isIncorrect = incorrectCells.some(cell => cell.r === rIdx && cell.c === cIdx);
+                        const isHighlighted = highlightedCell?.r === rIdx && highlightedCell?.c === cIdx;
                         
                         return (
                           <div 
@@ -2145,9 +2207,14 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                                 setSelectedTileForMove(tileId);
                               }
                             }}
-                            className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center relative transition-colors border-b border-r border-ink/10 bg-parchment hover:bg-parchment-dark ${selectedTileForMove && !tileId ? 'cursor-pointer hover:bg-crimson/5' : ''} ${isIncorrect ? 'ring-2 ring-red-500 z-30' : ''}`}
+                            className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center relative transition-colors border-b border-r border-ink/10 bg-parchment hover:bg-parchment-dark ${selectedTileForMove && !tileId ? 'cursor-pointer hover:bg-crimson/5' : ''} ${isHighlighted ? 'ring-4 ring-emerald-400 bg-emerald-100 z-30' : ''}`}
                           >
                             <div className="absolute inset-1 border border-ink/5 pointer-events-none"></div>
+                            {isIncorrect && (
+                              <div className="absolute inset-0 z-[60] pointer-events-none flex items-center justify-center bg-parchment/90 backdrop-blur-[2px]">
+                                <div className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-crimson shadow-[0_0_10px_rgba(220,20,60,0.6)] animate-pulse ring-2 ring-white/50"></div>
+                              </div>
+                            )}
                             {tileId ? (
                               <div className="absolute inset-0 p-0.5 z-10">
                                 {renderTile(tileId)}
@@ -2167,7 +2234,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                                       return <span key={markId} className="text-[10px] font-mono font-bold text-slate-500 leading-none w-3 h-3 flex items-center justify-center">-</span>;
                                     }
                                     else if (markId.startsWith('blocker-')) {
-                                      return <span key={markId} className="text-[8px] font-mono font-bold text-ink/80 leading-none w-3 h-3 flex items-center justify-center bg-ink/10 rounded-sm">b</span>;
+                                      return <span key={markId} className="text-[8px] font-mono font-bold text-ink/80 leading-none w-3 h-3 flex items-center justify-center bg-ink/10 rounded-sm">S</span>;
                                     }
                                     else if (markId.startsWith('number-')) {
                                       return <span key={markId} className="text-[8px] font-mono font-bold text-ink/80 leading-none w-3 h-3 flex items-center justify-center bg-ink/5 rounded-sm border border-ink/10">{markId.split('-')[1]}</span>;
@@ -2224,7 +2291,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                     <div className={`w-full h-full flex items-center justify-center bg-parchment border-2 border-dashed border-emerald-500/50 rounded-sm shadow-sm hover:shadow-md transition-all ${selectedTileForMove === 'safe-mark' ? 'ring-2 ring-emerald-500' : ''}`}>
                       <span className="text-xl font-mono font-bold text-emerald-600">x</span>
                     </div>
-                    <span className="text-[8px] uppercase font-bold text-emerald-600/70 tracking-tighter">No Blocker</span>
+                    <span className="text-[8px] uppercase font-bold text-emerald-600/70 tracking-tighter">No Secret</span>
                   </div>
 
                   <div 
@@ -2289,6 +2356,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [incorrectCells, setIncorrectCells] = useState<{r: number, c: number}[]>([]);
+  const [highlightedCell, setHighlightedCell] = useState<{r: number, c: number} | null>(null);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -2326,6 +2394,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
     setCheckStatus('idle');
     setPencilMarks({});
     setIsPencilMode(false);
+    setHighlightedCell(null);
     setTimer(0);
     setIsTimerRunning(false);
     setIncorrectCells([]);
@@ -2352,34 +2421,58 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
     return true;
   }, [puzzle, placedTiles, size]);
 
+  const handleHint = () => {
+    if (selectedTileForMove) {
+      const correctPos = puzzle?.solution[selectedTileForMove];
+      if (correctPos) {
+        setHighlightedCell(correctPos);
+        setTimer(prev => prev + 60); // Penalty
+        setTimeout(() => setHighlightedCell(null), 3000);
+      }
+    } else {
+      setIsHintMode(!isHintMode);
+      if (!isHintMode) setIsPencilMode(false);
+    }
+  };
+
   const handleCheckSolution = () => {
     const errors: {r: number, c: number}[] = [];
     let isPerfect = true;
+    let isComplete = true;
 
     for (let r = 0; r < size; r++) {
       for (let c = 0; c < size; c++) {
         const cell = puzzle.grid[r][c];
         const tileId = Object.keys(placedTiles).find(k => placedTiles[k]?.r === r && placedTiles[k]?.c === c);
         
-        let isCellCorrect = true;
-        if (cell.b) {
-          if (!tileId || !tileId.startsWith('blocker-')) isCellCorrect = false;
-        } else if (cell.i) {
-          if (tileId !== cell.i) isCellCorrect = false;
-        } else if (cell.n) {
-          if (tileId !== `number-${cell.n}`) isCellCorrect = false;
-        } else {
-          if (tileId) isCellCorrect = false;
+        // Check for completeness
+        if (cell.b || cell.i || cell.n) {
+          if (!tileId) isComplete = false;
         }
-        
-        if (!isCellCorrect) {
-          errors.push({r, c});
-          isPerfect = false;
+
+        // Only check correctness if a tile is placed
+        if (tileId) {
+          let isCellCorrect = true;
+          if (cell.b) {
+            if (!tileId.startsWith('blocker-')) isCellCorrect = false;
+          } else if (cell.i) {
+            if (tileId !== cell.i) isCellCorrect = false;
+          } else if (cell.n) {
+            if (tileId !== `number-${cell.n}`) isCellCorrect = false;
+          } else {
+            // Tile placed where it shouldn't be
+            isCellCorrect = false;
+          }
+          
+          if (!isCellCorrect) {
+            errors.push({r, c});
+            isPerfect = false;
+          }
         }
       }
     }
 
-    if (isPerfect) {
+    if (isPerfect && isComplete) {
       setCheckStatus('correct');
       setIsTimerRunning(false);
       setIsHintMode(false);
@@ -2390,10 +2483,17 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
         origin: { y: 0.6 },
         colors: ['#D93838', '#D4AF37', '#141414', '#E4E3E0']
       });
-    } else {
+    } else if (errors.length > 0) {
+      console.log('Incorrect cells:', errors);
       setCheckStatus('incorrect');
       setIncorrectCells(errors);
       setTimeout(() => setCheckStatus('idle'), 3000);
+    } else {
+      // No errors found, but not complete
+      setCheckStatus('idle');
+      // Maybe show a "so far so good" message?
+      // For now, just clear errors
+      setIncorrectCells([]);
     }
   };
 
@@ -2495,7 +2595,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
           }}
           className={`w-full h-full rounded-sm bg-ink/80 flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md border ${selectedTileForMove === tileId ? 'border-crimson ring-2 ring-crimson/50' : 'border-ink'} ${opacityClass} relative overflow-hidden`}
         >
-          <span className="text-[12px] font-mono text-parchment/60 font-bold">b</span>
+          <span className="text-[12px] font-mono text-parchment/60 font-bold">S</span>
           {hintOverlay}
         </div>
       );
@@ -2543,8 +2643,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
         className={`w-full h-full flex flex-col items-center justify-center bg-parchment cursor-grab active:cursor-grabbing shadow-md border ${selectedTileForMove === tileId ? 'border-crimson ring-2 ring-crimson/50' : 'border-gold/40'} relative overflow-hidden ${opacityClass}`}
       >
         <div className="absolute inset-1 border border-gold/20 pointer-events-none"></div>
-        <Icon className={`w-4 h-4 md:w-5 md:h-5 ${colorClass} mb-0.5 md:mb-1`} />
-        <span className="text-[6px] md:text-[8px] font-bold uppercase tracking-widest text-ink/70 truncate w-full text-center px-1">{name}</span>
+        <Icon className={`w-6 h-6 md:w-8 md:h-8 ${colorClass}`} />
         {hintOverlay}
       </div>
     );
@@ -2667,7 +2766,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
               </button>
               
               <a 
-                href="mailto:vangilsholding@gmail.com?subject=KIRO%20Feedback%20-%20I%20Won!"
+                href="mailto:info@kiro.today?subject=KIRO%20Feedback%20-%20I%20Won!"
                 className="block w-full py-3 bg-emerald-100 text-emerald-800 font-bold uppercase tracking-widest rounded-sm hover:bg-emerald-200 transition-all text-xs flex items-center justify-center gap-2"
               >
                 <ScrollText className="w-4 h-4" />
@@ -2714,11 +2813,13 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
                   const c = idx % size;
                   const tileId = Object.keys(placedTiles).find(k => placedTiles[k]?.r === r && placedTiles[k]?.c === c);
                   const marks = pencilMarks[`${r}-${c}`] || [];
+                  const isIncorrect = incorrectCells.some(cell => cell.r === r && cell.c === c);
+                  const isHighlighted = highlightedCell?.r === r && highlightedCell?.c === c;
                   
                   return (
                     <div 
                       key={idx} 
-                      className={`w-10 h-10 bg-parchment rounded-sm border flex items-center justify-center relative transition-colors ${selectedTileForMove ? 'hover:bg-ink/5 cursor-pointer' : ''} ${tileId ? 'border-transparent shadow-sm' : 'border-ink/10'}`}
+                      className={`w-10 h-10 bg-parchment rounded-sm border flex items-center justify-center relative transition-colors ${selectedTileForMove ? 'hover:bg-ink/5 cursor-pointer' : ''} ${tileId ? 'border-transparent shadow-sm' : 'border-ink/10'} ${isHighlighted ? 'ring-4 ring-emerald-400 bg-emerald-100 z-30' : ''}`}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
@@ -2732,6 +2833,11 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
                         }
                       }}
                     >
+                      {isIncorrect && (
+                        <div className="absolute inset-0 z-[60] pointer-events-none flex items-center justify-center bg-parchment/90 backdrop-blur-[2px]">
+                          <div className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-crimson shadow-[0_0_10px_rgba(220,20,60,0.6)] animate-pulse ring-2 ring-white/50"></div>
+                        </div>
+                      )}
                       {tileId ? (
                         <div className="absolute inset-0">
                           {renderTile(tileId)}
@@ -2741,7 +2847,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
                           {marks.map(markId => {
                             if (markId === 'safe-mark') return <div key={markId} className="w-3 h-3 flex items-center justify-center"><span className="text-[10px] font-mono font-bold text-emerald-600 leading-none">x</span></div>;
                             if (markId === 'no-relic-mark') return <div key={markId} className="w-3 h-3 flex items-center justify-center"><span className="text-[10px] font-mono font-bold text-slate-500 leading-none">-</span></div>;
-                            if (markId.startsWith('blocker-')) return <div key={markId} className="w-3 h-3 bg-ink/80 rounded-[1px] flex items-center justify-center"><span className="text-[6px] font-mono text-parchment/60 font-bold leading-none">b</span></div>;
+                            if (markId.startsWith('blocker-')) return <div key={markId} className="w-3 h-3 bg-ink/80 rounded-[1px] flex items-center justify-center"><span className="text-[6px] font-mono text-parchment/60 font-bold leading-none">S</span></div>;
                             if (markId.startsWith('number-')) return <div key={markId} className="w-3 h-3 bg-parchment border border-ink/20 flex items-center justify-center"><span className="text-[6px] font-mono text-ink/50 font-bold leading-none">{markId.split('-')[1]}</span></div>;
                             
                             let Icon = Hexagon;
@@ -2765,10 +2871,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
             {/* Tools Column */}
             <div className="w-12 shrink-0 flex flex-col items-center justify-start gap-3 mt-1 pl-2">
               <button 
-                onClick={() => {
-                  setIsHintMode(!isHintMode);
-                  if (!isHintMode) setIsPencilMode(false);
-                }}
+                onClick={handleHint}
                 className={`flex items-center justify-center w-10 h-10 border rounded-sm transition-colors ${
                   isHintMode 
                     ? 'bg-gold text-ink border-gold shadow-inner ring-2 ring-gold/50' 
