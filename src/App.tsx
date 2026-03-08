@@ -48,6 +48,7 @@ import {
 } from 'lucide-react';
 import { generatePuzzle, CellData, Point, PuzzleData } from './generator';
 import confetti from 'canvas-confetti';
+import { motion, AnimatePresence } from 'motion/react';
 import { polyfill } from "mobile-drag-drop";
 import { scrollBehaviourDragImageTranslateOverride } from "mobile-drag-drop/scroll-behaviour";
 import "mobile-drag-drop/default.css";
@@ -77,7 +78,7 @@ const ROLES = [
   { name: 'The Chronicler', title: 'Reki-no-Kirokusha', icon: ScrollText },
 ];
 
-function MissionFileContent({ puzzle, selectedTier, playerCount, checkedClues, toggleClue, isDesigner = false, hideStory = false, hideOrder = false }: any) {
+function MissionFileContent({ puzzle, selectedTier, playerCount, checkedClues, toggleClue, isDesigner = false, hideStory = false, hideOrder = false, isOrderRevealed = false, onRevealOrder }: any) {
   if (!puzzle) return null;
   return (
     <div className="space-y-8">
@@ -118,28 +119,46 @@ function MissionFileContent({ puzzle, selectedTier, playerCount, checkedClues, t
             <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-ink/20"></div>
             <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-ink/20"></div>
 
-            <div className="flex items-center justify-between mb-3 px-2 flex-wrap gap-y-2">
-              <MapPin className="w-4 h-4 text-gold" />
-              <div className="flex-1 h-px bg-ink/10 mx-2 border-t border-dashed border-ink/30 min-w-[20px]"></div>
-              
-              {SACRED_ITEMS_POOL.slice(0, selectedTier.items).map((item, idx) => {
-                const Icon = item.icon;
-                return (
-                  <React.Fragment key={item.id}>
-                    <div className="flex flex-col items-center gap-1">
-                      <Icon className="w-4 h-4 text-gold" />
-                      <span className="text-[8px] font-bold text-ink/40">{idx + 1}</span>
-                    </div>
-                    <div className="flex-1 h-px bg-ink/10 mx-2 border-t border-dashed border-ink/30 min-w-[20px]"></div>
-                  </React.Fragment>
-                );
-              })}
-              
-              <DoorOpen className="w-4 h-4 text-ink" />
-            </div>
-            <p className="font-serif text-[12px] italic text-ink/60 text-center">
-              "The unbroken path visits every open space, never crossing itself. The relics must be found in this exact sequence. Distance is measured in steps: 1 step means the rooms are directly connected."
-            </p>
+            {(!isDesigner && !isOrderRevealed && onRevealOrder) ? (
+              <div className="flex flex-col items-center justify-center py-6 gap-4">
+                <p className="font-serif text-sm italic text-ink/60 text-center px-4">
+                  "A fragmented scroll reveals the sacred order... but the ink is faded. Deciphering it will take time."
+                </p>
+                <button 
+                  onClick={onRevealOrder}
+                  className="flex items-center gap-2 px-4 py-2 bg-ink text-parchment rounded-sm shadow-md hover:bg-ink-dark transition-all text-xs font-bold uppercase tracking-widest"
+                >
+                  <Eye className="w-4 h-4" />
+                  Decipher Order (+5 min)
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3 px-2 flex-wrap gap-y-2">
+                  <MapPin className="w-4 h-4 text-gold" />
+                  <div className="flex-1 h-px bg-ink/10 mx-2 border-t border-dashed border-ink/30 min-w-[20px]"></div>
+                  
+                  {(puzzle?.items ? puzzle.items.slice(1, -1) : SACRED_ITEMS_POOL.slice(0, selectedTier.items).map(i => i.name)).map((itemName: string, idx: number) => {
+                    const itemObj = SACRED_ITEMS_POOL.find(i => i.name === itemName);
+                    const Icon = itemObj ? itemObj.icon : Hexagon;
+                    return (
+                      <React.Fragment key={itemName}>
+                        <div className="flex flex-col items-center gap-1">
+                          <Icon className="w-4 h-4 text-gold" />
+                          <span className="text-[8px] font-bold text-ink/40">{idx + 1}</span>
+                        </div>
+                        <div className="flex-1 h-px bg-ink/10 mx-2 border-t border-dashed border-ink/30 min-w-[20px]"></div>
+                      </React.Fragment>
+                    );
+                  })}
+                  
+                  <DoorOpen className="w-4 h-4 text-ink" />
+                </div>
+                <p className="font-serif text-[12px] italic text-ink/60 text-center">
+                  "The unbroken path visits every open space, never crossing itself. The relics must be found in this exact sequence. Distance is measured in steps: 1 step means the rooms are directly connected."
+                </p>
+              </>
+            )}
           </div>
         </section>
       )}
@@ -859,7 +878,7 @@ function GridMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
             <div class="element-box"><strong>[ T ]</strong><br>Torii (Start)</div>
             <div class="element-box"><strong>[ P ]</strong><br>Passage (End)</div>
             <div class="element-box"><strong>[ X ]</strong><br>${secretRooms} Secret Rooms</div>
-            ${itemLabels.slice(0, selectedTier.items).map((item: string, idx: number) => `<div class="element-box"><strong>[ ${idx + 1} ]</strong><br>${item}</div>`).join('')}
+            ${(puzzle?.items ? puzzle.items.slice(1, -1) : itemLabels.slice(0, selectedTier.items)).map((item: string, idx: number) => `<div class="element-box"><strong>[ ${idx + 1} ]</strong><br>${item}</div>`).join('')}
           </div>
         </div>
 
@@ -1725,6 +1744,27 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
   const [selectedTileForMove, setSelectedTileForMove] = useState<string | null>(null);
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [isOrderRevealed, setIsOrderRevealed] = useState(false);
+  const [celebrationIndex, setCelebrationIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (celebrationIndex !== null && puzzle) {
+      if (celebrationIndex < puzzle.path.length) {
+        const timeout = setTimeout(() => {
+          setCelebrationIndex(prev => (prev !== null ? prev + 1 : null));
+        }, 100); // Speed of the serpent coming to life
+        return () => clearTimeout(timeout);
+      } else {
+        // Animation finished, fire confetti
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#D93838', '#D4AF37', '#141414', '#E4E3E0']
+        });
+      }
+    }
+  }, [celebrationIndex, puzzle]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -1766,6 +1806,8 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
     setTimer(0);
     setIsTimerRunning(false);
     setIncorrectCells([]);
+    setIsOrderRevealed(false);
+    setCelebrationIndex(null);
   }, [puzzle, selectedTier, itemLabels, secretRooms, size]);
 
   const isSolved = React.useMemo(() => {
@@ -1845,12 +1887,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
       setIsTimerRunning(false);
       setIsHintMode(false);
       setIncorrectCells([]);
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#D93838', '#D4AF37', '#141414', '#E4E3E0']
-      });
+      setCelebrationIndex(0); // Start celebration sequence
     } else if (errors.length > 0) {
       setCheckStatus('incorrect');
       setIncorrectCells(errors);
@@ -2184,6 +2221,10 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                         const isIncorrect = incorrectCells.some(cell => cell.r === rIdx && cell.c === cIdx);
                         const isHighlighted = highlightedCell?.r === rIdx && highlightedCell?.c === cIdx;
                         
+                        const pathIndex = puzzle.path.findIndex((p: Point) => p.r === rIdx && p.c === cIdx);
+                        const isCelebrating = celebrationIndex !== null && pathIndex !== -1 && pathIndex <= celebrationIndex;
+                        const isCurrentCelebration = celebrationIndex !== null && pathIndex === celebrationIndex;
+                        
                         return (
                           <div 
                             key={`${rIdx}-${cIdx}`} 
@@ -2194,11 +2235,8 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                             }}
                             onClick={() => {
                               if (isPencilMode) {
-                                // Handled by pencil mode logic if needed, but we can also just toggle pencil marks here
-                                // Actually pencil mode is handled in handleDrop, let's replicate it
                                 if (selectedTileForMove) {
                                   handleDrop(selectedTileForMove, rIdx, cIdx);
-                                  // Don't deselect in pencil mode so they can place multiple
                                 }
                               } else if (selectedTileForMove) {
                                 handleDrop(selectedTileForMove, rIdx, cIdx);
@@ -2207,9 +2245,16 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                                 setSelectedTileForMove(tileId);
                               }
                             }}
-                            className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center relative transition-colors border-b border-r border-ink/10 bg-parchment hover:bg-parchment-dark ${selectedTileForMove && !tileId ? 'cursor-pointer hover:bg-crimson/5' : ''} ${isHighlighted ? 'ring-4 ring-emerald-400 bg-emerald-100 z-30' : ''}`}
+                            className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center relative transition-all duration-500 border-b border-r border-ink/10 bg-parchment hover:bg-parchment-dark ${selectedTileForMove && !tileId ? 'cursor-pointer hover:bg-crimson/5' : ''} ${isHighlighted ? 'ring-4 ring-emerald-400 bg-emerald-100 z-30' : ''} ${isCelebrating ? 'z-40' : ''}`}
+                            style={{ 
+                              transform: isCelebrating ? 'translateY(-8px)' : 'none',
+                              boxShadow: isCelebrating ? '0 10px 20px rgba(0,0,0,0.2)' : 'none'
+                            }}
                           >
                             <div className="absolute inset-1 border border-ink/5 pointer-events-none"></div>
+                            {isCelebrating && (
+                              <div className={`absolute inset-0 bg-gold/20 mix-blend-overlay z-20 animate-pulse transition-opacity duration-500 ${isCurrentCelebration ? 'opacity-100' : 'opacity-40'}`}></div>
+                            )}
                             {isIncorrect && (
                               <div className="absolute inset-0 z-[60] pointer-events-none flex items-center justify-center bg-parchment/90 backdrop-blur-[2px]">
                                 <div className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-crimson shadow-[0_0_10px_rgba(220,20,60,0.6)] animate-pulse ring-2 ring-white/50"></div>
@@ -2335,6 +2380,11 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
               playerCount={playerCount} 
               checkedClues={checkedClues}
               toggleClue={toggleClue}
+              isOrderRevealed={isOrderRevealed}
+              onRevealOrder={() => {
+                setIsOrderRevealed(true);
+                setTimer(prev => prev + 300);
+              }}
             />
           </div>
         </div>
@@ -2357,6 +2407,27 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [incorrectCells, setIncorrectCells] = useState<{r: number, c: number}[]>([]);
   const [highlightedCell, setHighlightedCell] = useState<{r: number, c: number} | null>(null);
+  const [isOrderRevealed, setIsOrderRevealed] = useState(false);
+  const [celebrationIndex, setCelebrationIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (celebrationIndex !== null && puzzle) {
+      if (celebrationIndex < puzzle.path.length) {
+        const timeout = setTimeout(() => {
+          setCelebrationIndex(prev => (prev !== null ? prev + 1 : null));
+        }, 100); // Speed of the serpent coming to life
+        return () => clearTimeout(timeout);
+      } else {
+        // Animation finished, fire confetti
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#D93838', '#D4AF37', '#141414', '#E4E3E0']
+        });
+      }
+    }
+  }, [celebrationIndex, puzzle]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -2398,6 +2469,8 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
     setTimer(0);
     setIsTimerRunning(false);
     setIncorrectCells([]);
+    setIsOrderRevealed(false);
+    setCelebrationIndex(null);
   }, [puzzle, selectedTier, itemLabels, secretRooms, size]);
 
   const isSolved = React.useMemo(() => {
@@ -2477,12 +2550,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
       setIsTimerRunning(false);
       setIsHintMode(false);
       setIncorrectCells([]);
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#D93838', '#D4AF37', '#141414', '#E4E3E0']
-      });
+      setCelebrationIndex(0); // Start celebration sequence
     } else if (errors.length > 0) {
       console.log('Incorrect cells:', errors);
       setCheckStatus('incorrect');
@@ -2816,10 +2884,18 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
                   const isIncorrect = incorrectCells.some(cell => cell.r === r && cell.c === c);
                   const isHighlighted = highlightedCell?.r === r && highlightedCell?.c === c;
                   
+                  const pathIndex = puzzle.path.findIndex((p: Point) => p.r === r && p.c === c);
+                  const isCelebrating = celebrationIndex !== null && pathIndex !== -1 && pathIndex <= celebrationIndex;
+                  const isCurrentCelebration = celebrationIndex !== null && pathIndex === celebrationIndex;
+                  
                   return (
                     <div 
                       key={idx} 
-                      className={`w-10 h-10 bg-parchment rounded-sm border flex items-center justify-center relative transition-colors ${selectedTileForMove ? 'hover:bg-ink/5 cursor-pointer' : ''} ${tileId ? 'border-transparent shadow-sm' : 'border-ink/10'} ${isHighlighted ? 'ring-4 ring-emerald-400 bg-emerald-100 z-30' : ''}`}
+                      className={`w-10 h-10 bg-parchment rounded-sm border flex items-center justify-center relative transition-all duration-500 ${selectedTileForMove ? 'hover:bg-ink/5 cursor-pointer' : ''} ${tileId ? 'border-transparent shadow-sm' : 'border-ink/10'} ${isHighlighted ? 'ring-4 ring-emerald-400 bg-emerald-100 z-30' : ''} ${isCelebrating ? 'z-40' : ''}`}
+                      style={{ 
+                        transform: isCelebrating ? 'translateY(-6px)' : 'none',
+                        boxShadow: isCelebrating ? '0 8px 16px rgba(0,0,0,0.2)' : 'none'
+                      }}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
@@ -2833,6 +2909,9 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
                         }
                       }}
                     >
+                      {isCelebrating && (
+                        <div className={`absolute inset-0 bg-gold/20 mix-blend-overlay z-20 animate-pulse transition-opacity duration-500 ${isCurrentCelebration ? 'opacity-100' : 'opacity-40'}`}></div>
+                      )}
                       {isIncorrect && (
                         <div className="absolute inset-0 z-[60] pointer-events-none flex items-center justify-center bg-parchment/90 backdrop-blur-[2px]">
                           <div className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-crimson shadow-[0_0_10px_rgba(220,20,60,0.6)] animate-pulse ring-2 ring-white/50"></div>
@@ -2964,28 +3043,49 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
                 <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-ink/20"></div>
                 <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-ink/20"></div>
 
-                <div className="flex items-center justify-between mb-3 px-2 flex-wrap gap-y-2">
-                  <MapPin className="w-4 h-4 text-gold" />
-                  <div className="flex-1 h-px bg-ink/10 mx-2 border-t border-dashed border-ink/30 min-w-[20px]"></div>
-                  
-                  {SACRED_ITEMS_POOL.slice(0, selectedTier.items).map((item, idx) => {
-                    const Icon = item.icon;
-                    return (
-                      <React.Fragment key={item.id}>
-                        <div className="flex flex-col items-center gap-1">
-                          <Icon className="w-4 h-4 text-gold" />
-                          <span className="text-[8px] font-bold text-ink/40">{idx + 1}</span>
-                        </div>
-                        <div className="flex-1 h-px bg-ink/10 mx-2 border-t border-dashed border-ink/30 min-w-[20px]"></div>
-                      </React.Fragment>
-                    );
-                  })}
-                  
-                  <DoorOpen className="w-4 h-4 text-ink" />
-                </div>
-                <p className="font-serif text-[12px] italic text-ink/60 text-center">
-                  "The unbroken path visits every open space, never crossing itself. The relics must be found in this exact sequence."
-                </p>
+                {!isOrderRevealed ? (
+                  <div className="flex flex-col items-center justify-center py-6 gap-4">
+                    <p className="font-serif text-sm italic text-ink/60 text-center px-4">
+                      "A fragmented scroll reveals the sacred order... but the ink is faded. Deciphering it will take time."
+                    </p>
+                    <button 
+                      onClick={() => {
+                        setIsOrderRevealed(true);
+                        setTimer(prev => prev + 300);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-ink text-parchment rounded-sm shadow-md hover:bg-ink-dark transition-all text-xs font-bold uppercase tracking-widest"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Decipher Order (+5 min)
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-3 px-2 flex-wrap gap-y-2">
+                      <MapPin className="w-4 h-4 text-gold" />
+                      <div className="flex-1 h-px bg-ink/10 mx-2 border-t border-dashed border-ink/30 min-w-[20px]"></div>
+                      
+                      {(puzzle?.items ? puzzle.items.slice(1, -1) : SACRED_ITEMS_POOL.slice(0, selectedTier.items).map(i => i.name)).map((itemName: string, idx: number) => {
+                        const itemObj = SACRED_ITEMS_POOL.find(i => i.name === itemName);
+                        const Icon = itemObj ? itemObj.icon : Hexagon;
+                        return (
+                          <React.Fragment key={itemName}>
+                            <div className="flex flex-col items-center gap-1">
+                              <Icon className="w-4 h-4 text-gold" />
+                              <span className="text-[8px] font-bold text-ink/40">{idx + 1}</span>
+                            </div>
+                            <div className="flex-1 h-px bg-ink/10 mx-2 border-t border-dashed border-ink/30 min-w-[20px]"></div>
+                          </React.Fragment>
+                        );
+                      })}
+                      
+                      <DoorOpen className="w-4 h-4 text-ink" />
+                    </div>
+                    <p className="font-serif text-[12px] italic text-ink/60 text-center">
+                      "The unbroken path visits every open space, never crossing itself. The relics must be found in this exact sequence."
+                    </p>
+                  </>
+                )}
               </div>
             </section>
           </div>

@@ -18,6 +18,7 @@ export type PuzzleData = {
   solverSteps: SolverStep[];
   seed: string;
   solution: Record<string, { r: number, c: number }>;
+  items: string[];
 };
 
 function mulberry32(a: number) {
@@ -60,7 +61,7 @@ const ITEM_DESCRIPTIONS: Record<string, string> = {
 export function generatePuzzle(
   size: number, 
   numBlockers: number, 
-  items: string[],
+  inputItems: string[],
   rowLabels: string[],
   colLabels: string[],
   movementType: 'orthogonal' | 'diagonal' = 'orthogonal',
@@ -73,6 +74,14 @@ export function generatePuzzle(
   while (attempts < 100) {
     attempts++;
     const prng = mulberry32(seedStringToNumber(currentSeed));
+
+    // Shuffle items (except first and last)
+    const middleItems = inputItems.slice(1, -1);
+    for (let i = middleItems.length - 1; i > 0; i--) {
+      const j = Math.floor(prng() * (i + 1));
+      [middleItems[i], middleItems[j]] = [middleItems[j], middleItems[i]];
+    }
+    const items = [inputItems[0], ...middleItems, inputItems[inputItems.length - 1]];
 
     const targetLength = size * size - numBlockers;
     let path: Point[] = [];
@@ -141,7 +150,7 @@ export function generatePuzzle(
       }
     }
 
-    const puzzle = { grid, path, story, clues, solverSteps, seed: currentSeed, solution };
+    const puzzle = { grid, path, story, clues, solverSteps, seed: currentSeed, solution, items };
     
     if (isSolved) {
       return puzzle;
