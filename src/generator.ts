@@ -166,17 +166,17 @@ export function generatePuzzle(
 
 function generateStory(items: string[], movementType: 'orthogonal' | 'diagonal', prng: () => number): string[] {
   const intros = [
-    "From the dusty archives of the Kiro Fort, a fragmented scroll emerges. Its edges are burnt, its ink faded, but the path it describes is clear to those who know how to read it.",
-    "The monks of the Crimson Path left behind only riddles. This parchment, found clutched in the hands of a stone guardian, speaks of a journey through the secret chambers.",
-    "A whisper in the dark, a shadow on the wall. The old gods demand a specific sequence to unlock the Passage. Tread carefully, for the secret rooms hold only despair."
+    "Deep within the mist-shrouded peaks of the Iron Mountains lies the Kiro Fort, a shifting labyrinth of stone and shadow. For centuries, it has guarded the Shogun's most forbidden secrets, its corridors rearranging themselves like a living beast to trap the unworthy. You stand before its heavy gates, a shadow operative tasked with a mission that history has forgotten.",
+    "The monks of the Crimson Path were masters of silence and stone. They left behind no maps, only riddles etched into the very foundations of the Kiro Fort. This parchment, found clutched in the cold, stone hands of a guardian who has stood watch for a thousand years, is the only key to the journey ahead. It speaks of a path that breathes, a serpent of light that must be traced through the darkness.",
+    "A whisper in the dark, a shadow that moves when you do not. The old gods of the fort demand a specific sequence to unlock the way forward. The air here is thick with the scent of ancient incense and damp earth. Tread carefully, for the secret rooms—the voids where the fort's heart does not beat—hold only the echoes of those who failed before you."
   ];
   const intro = intros[Math.floor(prng() * intros.length)];
   
   const pathDesc = movementType === 'orthogonal' 
-    ? "The Serpent moves only in straight lines—North, South, East, or West. It never moves diagonally, and it never crosses its own wake."
-    : "The Serpent moves freely, crossing boundaries both straight and diagonal. Yet, it never crosses its own wake.";
+    ? "The Serpent's Path is rigid and absolute. It moves only in straight lines—North, South, East, or West—mirroring the cardinal winds. It never deigns to move diagonally, and it never crosses its own wake, for to touch its own tail is to vanish into the void forever."
+    : "The Serpent's Path is fluid and unpredictable, crossing boundaries both straight and diagonal like a mountain stream. It slips through the corners of reality, yet it remains a single, unbroken line. It never crosses its own wake, for the path behind you is consumed by the shadows as you move.";
 
-  const itemOrder = `Your journey begins at the **${items[0]}**. From there, you must gather the sacred relics in a precise order: ${items.slice(1, -1).map(i => `the **${i}**`).join(', ')}. Only then may you enter the **${items[items.length-1]}**.`;
+  const itemOrder = `Your journey begins at the **${items[0]}**, the threshold between the known world and the labyrinth. From there, you must gather the sacred relics in the precise order dictated by the ancient rites of the fort. Do not falter, for the relics respond only to the correct sequence. Only when the final artifact is clutched in your hands will the **${items[items.length-1]}** manifest to grant you passage back to the light.`;
 
   return [intro, pathDesc, itemOrder];
 }
