@@ -742,8 +742,27 @@ export default function App() {
 function GridMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, secretRooms, puzzle, onRegenerate, playerCount, movementType, setMovementType, checkedClues, toggleClue }: any) {
   const [activeTab, setActiveTab] = useState<'mission' | 'solver'>('mission');
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
+  const [celebrationIndex, setCelebrationIndex] = useState<number | null>(null);
 
   const size = selectedTier.size;
+
+  useEffect(() => {
+    if (celebrationIndex !== null && puzzle) {
+      if (celebrationIndex < puzzle.path.length) {
+        const timeout = setTimeout(() => {
+          setCelebrationIndex(prev => (prev !== null ? prev + 1 : null));
+        }, 100);
+        return () => clearTimeout(timeout);
+      } else {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#D93838', '#D4AF37', '#141414', '#E4E3E0']
+        });
+      }
+    }
+  }, [celebrationIndex, puzzle]);
 
   // When switching tabs, reset step
   useEffect(() => {
@@ -1034,19 +1053,31 @@ function GridMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                       const showItem = cell.state === 'item';
                       const showPath = cell.state === 'path';
                       
+                      const pathIndex = puzzle.path.findIndex((p: Point) => p.r === rIdx && p.c === cIdx);
+                      const isCelebrating = celebrationIndex !== null && pathIndex !== -1 && pathIndex <= celebrationIndex;
+                      const isCurrentCelebration = celebrationIndex !== null && pathIndex === celebrationIndex;
+                      
                       return (
                         <div 
                           key={`${rIdx}-${cIdx}`} 
-                          className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center relative transition-colors cursor-default border-b border-r border-ink/10 ${
+                          className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center relative transition-all duration-500 cursor-default border-b border-r border-ink/10 ${
                             showBlocker 
                               ? 'bg-ink/10' 
                               : showSafe 
                                 ? 'bg-emerald-500/5'
                                 : 'bg-parchment hover:bg-parchment-dark'
-                          } ${cell.highlight ? 'ring-2 ring-inset ring-crimson/50' : ''}`}
+                          } ${cell.highlight ? 'ring-2 ring-inset ring-crimson/50' : ''} ${isCelebrating ? 'z-40' : ''}`}
+                          style={{ 
+                            transform: isCelebrating ? 'translateY(-8px)' : 'none',
+                            boxShadow: isCelebrating ? '0 10px 20px rgba(0,0,0,0.2)' : 'none'
+                          }}
                         >
                           {/* Subtle inner border for tile effect */}
                           <div className="absolute inset-1 border border-ink/5 pointer-events-none"></div>
+                          
+                          {isCelebrating && (
+                            <div className={`absolute inset-0 bg-gold/20 mix-blend-overlay z-20 animate-pulse transition-opacity duration-500 ${isCurrentCelebration ? 'opacity-100' : 'opacity-40'}`}></div>
+                          )}
                           
                           {/* Secret Room Blocker */}
                           {showBlocker && (
@@ -1260,6 +1291,13 @@ function GridMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
           </div>
         </div>
         <div className="flex items-center gap-4 relative z-10">
+          <button 
+            onClick={() => setCelebrationIndex(0)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gold/20 hover:bg-gold/30 text-gold border border-gold/30 rounded-sm text-[10px] font-bold uppercase tracking-widest transition-all"
+          >
+            <Sparkles className="w-3 h-3" />
+            Test Animation
+          </button>
           <div className="text-[10px] uppercase tracking-widest text-parchment/40 font-mono hidden md:block">
             Archive Seal
           </div>
@@ -1746,6 +1784,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [isOrderRevealed, setIsOrderRevealed] = useState(false);
   const [celebrationIndex, setCelebrationIndex] = useState<number | null>(null);
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
 
   useEffect(() => {
     if (celebrationIndex !== null && puzzle) {
@@ -1762,6 +1801,8 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
           origin: { y: 0.6 },
           colors: ['#D93838', '#D4AF37', '#141414', '#E4E3E0']
         });
+        // Delay showing the success overlay so they can see the final state
+        setTimeout(() => setShowSuccessOverlay(true), 800);
       }
     }
   }, [celebrationIndex, puzzle]);
@@ -1808,6 +1849,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
     setIncorrectCells([]);
     setIsOrderRevealed(false);
     setCelebrationIndex(null);
+    setShowSuccessOverlay(false);
   }, [puzzle, selectedTier, itemLabels, secretRooms, size]);
 
   const isSolved = React.useMemo(() => {
@@ -2136,7 +2178,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
       </header>
 
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-        {checkStatus === 'correct' && (
+        {showSuccessOverlay && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-parchment/80 backdrop-blur-sm">
             <div className="bg-parchment border-2 border-emerald-500 p-8 rounded-sm shadow-2xl text-center max-w-sm">
               <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -2409,6 +2451,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
   const [highlightedCell, setHighlightedCell] = useState<{r: number, c: number} | null>(null);
   const [isOrderRevealed, setIsOrderRevealed] = useState(false);
   const [celebrationIndex, setCelebrationIndex] = useState<number | null>(null);
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
 
   useEffect(() => {
     if (celebrationIndex !== null && puzzle) {
@@ -2425,6 +2468,8 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
           origin: { y: 0.6 },
           colors: ['#D93838', '#D4AF37', '#141414', '#E4E3E0']
         });
+        // Delay showing the success overlay so they can see the final state
+        setTimeout(() => setShowSuccessOverlay(true), 800);
       }
     }
   }, [celebrationIndex, puzzle]);
@@ -2471,6 +2516,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
     setIncorrectCells([]);
     setIsOrderRevealed(false);
     setCelebrationIndex(null);
+    setShowSuccessOverlay(false);
   }, [puzzle, selectedTier, itemLabels, secretRooms, size]);
 
   const isSolved = React.useMemo(() => {
@@ -2812,7 +2858,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
         </div>
       )}
 
-      {checkStatus === 'correct' && (
+      {showSuccessOverlay && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-parchment/80 backdrop-blur-sm">
           <div className="bg-parchment border-2 border-emerald-500 p-8 rounded-sm shadow-2xl text-center max-w-sm mx-4">
             <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
