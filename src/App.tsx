@@ -64,7 +64,7 @@ import {
 } from 'react-icons/gi';
 
 // --- Types ---
-type Tab = 'mission' | 'variables' | 'play' | 'mobilePlay' | 'tutorial';
+type Tab = 'mission' | 'variables' | 'play' | 'mobilePlay' | 'tutorial' | 'feedback';
 
 // --- Mock Data ---
 const ROW_LABELS = ['Sun', 'Moon', 'Star', 'Cloud', 'Rain', 'Lightning', 'Abyss', 'Moonlight', 'Zenith'];
@@ -77,6 +77,95 @@ const ROLES = [
   { name: 'The Pathfinder', title: 'Michi-no-Kaitakusha', icon: Compass },
   { name: 'The Chronicler', title: 'Reki-no-Kirokusha', icon: ScrollText },
 ];
+
+function FeedbackPage({ onBack }: { onBack: () => void }) {
+  const [name, setName] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [isSent, setIsSent] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const subject = encodeURIComponent(`KIRO Feedback from ${name}`);
+    const body = encodeURIComponent(`Name: ${name}\n\nFeedback:\n${feedback}`);
+    window.location.href = `mailto:info@kiro.today?subject=${subject}&body=${body}`;
+    setIsSent(true);
+    setTimeout(() => {
+      setIsSent(false);
+      onBack();
+    }, 3000);
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-parchment overflow-y-auto">
+      <div className="p-6 md:p-12 max-w-2xl mx-auto w-full">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h2 className="font-serif text-3xl font-bold text-crimson mb-2">Feedback Archive</h2>
+            <p className="text-sm text-ink/60 uppercase tracking-widest font-bold">Help us refine the Sacred Path</p>
+          </div>
+          <button 
+            onClick={onBack}
+            className="p-2 hover:bg-ink/5 rounded-full transition-colors"
+          >
+            <X className="w-6 h-6 text-ink/40" />
+          </button>
+        </div>
+
+        {isSent ? (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-emerald-50 border border-emerald-200 p-8 rounded-sm text-center"
+          >
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+            </div>
+            <h3 className="font-serif text-xl font-bold text-emerald-900 mb-2">Message Dispatched</h3>
+            <p className="text-sm text-emerald-700">Your feedback has been prepared for the archive. Thank you for your contribution.</p>
+          </motion.div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-widest text-ink/50">Naam</label>
+              <input 
+                type="text" 
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name..."
+                className="w-full bg-parchment border border-ink/10 p-4 rounded-sm focus:outline-none focus:ring-2 focus:ring-crimson/20 focus:border-crimson/50 transition-all font-serif"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-widest text-ink/50">Feedback</label>
+              <textarea 
+                required
+                rows={6}
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Share your thoughts, report a bug, or suggest an improvement..."
+                className="w-full bg-parchment border border-ink/10 p-4 rounded-sm focus:outline-none focus:ring-2 focus:ring-crimson/20 focus:border-crimson/50 transition-all font-serif resize-none"
+              />
+            </div>
+
+            <button 
+              type="submit"
+              className="w-full py-4 bg-ink hover:bg-ink-dark text-parchment font-bold uppercase tracking-widest rounded-sm shadow-md transition-all flex items-center justify-center gap-3 group"
+            >
+              <ScrollText className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              Send to Archive
+            </button>
+            
+            <p className="text-[10px] text-center text-ink/40 italic">
+              Clicking send will open your default email client addressed to info@kiro.today
+            </p>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function MissionFileContent({ puzzle, selectedTier, playerCount, checkedClues, toggleClue, isDesigner = false, hideStory = false, hideOrder = false, isOrderRevealed = false, onRevealOrder }: any) {
   if (!puzzle) return null;
@@ -649,6 +738,17 @@ export default function App() {
                 <Settings2 className="w-4 h-4" />
                 Archive Variables
               </button>
+              <button 
+                onClick={() => { setActiveTab('feedback'); setIsMobileMenuOpen(false); }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'feedback' 
+                    ? 'bg-ink text-parchment shadow-md' 
+                    : 'text-ink/70 hover:bg-ink/5 hover:text-ink'
+                }`}
+              >
+                <ScrollText className="w-4 h-4" />
+                Send Feedback
+              </button>
             </div>
           </div>
 
@@ -672,6 +772,8 @@ export default function App() {
         )}
         {activeTab === 'tutorial' ? (
           <TutorialScreen onStart={() => setActiveTab('mission')} />
+        ) : activeTab === 'feedback' ? (
+          <FeedbackPage onBack={() => setActiveTab(isDesigner ? 'mission' : 'mobilePlay')} />
         ) : activeTab === 'mission' ? (
           <GridMissionScreen 
             selectedTier={selectedTier}
@@ -686,6 +788,7 @@ export default function App() {
             setMovementType={setMovementType}
             checkedClues={checkedClues}
             toggleClue={toggleClue}
+            onNavigate={setActiveTab}
           />
         ) : activeTab === 'play' ? (
           <PlayMissionScreen 
@@ -701,6 +804,7 @@ export default function App() {
             setSeedInput={setSeedInput}
             checkedClues={checkedClues}
             toggleClue={toggleClue}
+            onNavigate={setActiveTab}
           />
         ) : activeTab === 'mobilePlay' ? (
           <MobilePlayScreen 
@@ -718,6 +822,7 @@ export default function App() {
             setIsMobileMenuOpen={setIsMobileMenuOpen}
             checkedClues={checkedClues}
             toggleClue={toggleClue}
+            onNavigate={setActiveTab}
           />
         ) : (
           <VariablesScreen 
@@ -739,7 +844,7 @@ export default function App() {
 
 // --- Screens ---
 
-function GridMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, secretRooms, puzzle, onRegenerate, playerCount, movementType, setMovementType, checkedClues, toggleClue }: any) {
+function GridMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, secretRooms, puzzle, onRegenerate, playerCount, movementType, setMovementType, checkedClues, toggleClue, onNavigate }: any) {
   const [activeTab, setActiveTab] = useState<'mission' | 'solver'>('mission');
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
   const [celebrationIndex, setCelebrationIndex] = useState<number | null>(null);
@@ -1292,6 +1397,13 @@ function GridMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
         </div>
         <div className="flex items-center gap-4 relative z-10">
           <button 
+            onClick={() => onNavigate('feedback')}
+            className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/30 rounded-sm text-[10px] font-bold uppercase tracking-widest transition-all"
+          >
+            <ScrollText className="w-3 h-3" />
+            Feedback
+          </button>
+          <button 
             onClick={() => setCelebrationIndex(0)}
             className="flex items-center gap-2 px-3 py-1.5 bg-gold/20 hover:bg-gold/30 text-gold border border-gold/30 rounded-sm text-[10px] font-bold uppercase tracking-widest transition-all"
           >
@@ -1769,7 +1881,7 @@ function VariablesScreen({
   );
 }
 
-function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, secretRooms, puzzle, onRegenerate, playerCount, seedInput, setSeedInput, checkedClues, toggleClue }: any) {
+function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, secretRooms, puzzle, onRegenerate, playerCount, seedInput, setSeedInput, checkedClues, toggleClue, onNavigate }: any) {
   const size = selectedTier.size;
   const [placedTiles, setPlacedTiles] = useState<Record<string, {r: number, c: number} | null>>({});
   const [checkStatus, setCheckStatus] = useState<'idle' | 'correct' | 'incorrect'>('idle');
@@ -2197,6 +2309,13 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                 <RefreshCw className="w-4 h-4" />
                 Play Another Mission
               </button>
+              <button 
+                onClick={() => onNavigate('feedback')}
+                className="w-full py-3 bg-emerald-100 text-emerald-800 font-bold uppercase tracking-widest rounded-sm hover:bg-emerald-200 transition-all text-xs flex items-center justify-center gap-2"
+              >
+                <ScrollText className="w-4 h-4" />
+                Send Feedback
+              </button>
             </div>
           </div>
         )}
@@ -2435,7 +2554,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
   );
 }
 
-function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secretRooms, puzzle, onRegenerate, playerCount, seedInput, setSeedInput, isMobileMenuOpen, setIsMobileMenuOpen, checkedClues, toggleClue }: any) {
+function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secretRooms, puzzle, onRegenerate, playerCount, seedInput, setSeedInput, isMobileMenuOpen, setIsMobileMenuOpen, checkedClues, toggleClue, onNavigate }: any) {
   const size = selectedTier.size;
   const [placedTiles, setPlacedTiles] = useState<Record<string, {r: number, c: number} | null>>({});
   const [checkStatus, setCheckStatus] = useState<'idle' | 'correct' | 'incorrect'>('idle');
@@ -2838,13 +2957,16 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="absolute top-14 left-0 right-0 bg-parchment border-b border-ink/10 shadow-lg z-40 p-4 flex flex-col gap-3 animate-in slide-in-from-top-2">
-          <a 
-            href="mailto:vangilsholding@gmail.com?subject=KIRO%20Feedback"
+          <button 
+            onClick={() => {
+              onNavigate('feedback');
+              setIsMobileMenuOpen(false);
+            }}
             className="flex items-center gap-3 px-4 py-3 bg-ink/5 rounded-sm text-sm font-bold text-ink hover:bg-ink/10 transition-colors"
           >
             <ScrollText className="w-4 h-4" />
             Give Feedback / Report Bug
-          </a>
+          </button>
           <button 
             onClick={() => {
               onRegenerate();
@@ -2879,13 +3001,15 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
                 Play Another Mission
               </button>
               
-              <a 
-                href="mailto:info@kiro.today?subject=KIRO%20Feedback%20-%20I%20Won!"
+              <button 
+                onClick={() => {
+                  onNavigate('feedback');
+                }}
                 className="block w-full py-3 bg-emerald-100 text-emerald-800 font-bold uppercase tracking-widest rounded-sm hover:bg-emerald-200 transition-all text-xs flex items-center justify-center gap-2"
               >
                 <ScrollText className="w-4 h-4" />
                 Send Feedback
-              </a>
+              </button>
             </div>
           </div>
         </div>
