@@ -83,16 +83,30 @@ function FeedbackPage({ onBack }: { onBack: () => void }) {
   const [feedback, setFeedback] = useState('');
   const [isSent, setIsSent] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const subject = encodeURIComponent(`KIRO Feedback from ${name}`);
-    const body = encodeURIComponent(`Name: ${name}\n\nFeedback:\n${feedback}`);
-    window.location.href = `mailto:info@kiro.today?subject=${subject}&body=${body}`;
-    setIsSent(true);
-    setTimeout(() => {
-      setIsSent(false);
-      onBack();
-    }, 3000);
+    try {
+      const response = await fetch('/api/send-feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, feedback }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send feedback');
+      }
+
+      setIsSent(true);
+      setTimeout(() => {
+        setIsSent(false);
+        onBack();
+      }, 3000);
+    } catch (error) {
+      console.error('Error sending feedback:', error);
+      alert('Failed to send feedback. Please try again later.');
+    }
   };
 
   return (
@@ -158,7 +172,7 @@ function FeedbackPage({ onBack }: { onBack: () => void }) {
             </button>
             
             <p className="text-[10px] text-center text-ink/40 italic">
-              Clicking send will open your default email client addressed to info@kiro.today
+              Your feedback will be sent directly to our team.
             </p>
           </form>
         )}
