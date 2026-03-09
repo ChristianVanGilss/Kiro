@@ -2947,7 +2947,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
   return (
     <div className="h-full flex flex-col relative bg-parchment">
       {/* Mobile Header */}
-      <div className="md:hidden flex-none h-14 bg-parchment border-b border-ink/10 flex items-center justify-between px-3 z-50">
+      <div className="flex-none h-14 bg-parchment border-b border-ink/10 flex items-center justify-between px-3 z-50">
         <div className="flex items-center gap-2">
           <h1 className="font-serif text-xl font-bold tracking-wide text-crimson flex items-center gap-2">
             <Hexagon className="w-5 h-5 fill-crimson/20" />
