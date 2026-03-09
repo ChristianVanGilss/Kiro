@@ -59,16 +59,16 @@ polyfill({
 });
 
 import { 
-  GiDragonHead, GiEatingPelican, GiTigerHead, GiFoxHead, GiMonkey, GiCirclingFish, GiHorseHead, GiSittingDog, GiDragonSpiral,
-  GiSun, GiMoon, GiStarSwirl, GiCloudRing, GiRaining, GiLightningTear, GiWaveCrest, GiMoonOrbit, GiSunrise
+  GiDragonHead, GiEatingPelican, GiTigerHead, GiFoxHead, GiMonkey, GiCirclingFish, GiPrayingMantis, GiTurtle, GiUnicorn,
+  GiSun, GiMoon, GiStarSwirl, GiCloudRing, GiRaining, GiLightningTear, GiWhirlwind, GiSnowflake1, GiEclipse
 } from 'react-icons/gi';
 
 // --- Types ---
 type Tab = 'mission' | 'variables' | 'play' | 'mobilePlay' | 'tutorial' | 'feedback';
 
 // --- Mock Data ---
-const ROW_LABELS = ['Sun', 'Moon', 'Star', 'Cloud', 'Rain', 'Lightning', 'Abyss', 'Moonlight', 'Zenith'];
-const COL_LABELS = ['Dragon', 'Pelican', 'Tiger', 'Fox', 'Monkey', 'Koi', 'Horse', 'Dog', 'Celestial Dragon'];
+const ROW_LABELS = ['Sun', 'Moon', 'Star', 'Cloud', 'Rain', 'Lightning', 'Wind', 'Frost', 'Eclipse'];
+const COL_LABELS = ['Dragon', 'Pelican', 'Tiger', 'Fox', 'Monkey', 'Koi', 'Mantis', 'Turtoise', 'Kirin'];
 
 const ROLES = [
   { name: 'The Celestial Architect', title: 'Ten-no-Kenshitsusha', icon: Cloud },
@@ -2902,9 +2902,9 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
       case 'Cloud': return renderIcon(GiCloudRing);
       case 'Rain': return renderIcon(GiRaining);
       case 'Lightning': return renderIcon(GiLightningTear);
-      case 'Abyss': return renderIcon(GiWaveCrest);
-      case 'Moonlight': return renderIcon(GiMoonOrbit);
-      case 'Zenith': return renderIcon(GiSunrise);
+      case 'Wind': return renderIcon(GiWhirlwind);
+      case 'Frost': return renderIcon(GiSnowflake1);
+      case 'Eclipse': return renderIcon(GiEclipse);
       
       case 'Dragon': return renderIcon(GiDragonHead);
       case 'Pelican': return renderIcon(GiEatingPelican);
@@ -2912,9 +2912,9 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
       case 'Fox': return renderIcon(GiFoxHead);
       case 'Monkey': return renderIcon(GiMonkey);
       case 'Koi': return renderIcon(GiCirclingFish);
-      case 'Horse': return renderIcon(GiHorseHead);
-      case 'Dog': return renderIcon(GiSittingDog);
-      case 'Celestial Dragon': return renderIcon(GiDragonSpiral);
+      case 'Mantis': return renderIcon(GiPrayingMantis);
+      case 'Turtoise': return renderIcon(GiTurtle);
+      case 'Kirin': return renderIcon(GiUnicorn);
       default: return <span className="text-[9px] font-semibold uppercase tracking-widest text-ink/40" title={label}>{label.substring(0, 3)}</span>;
     }
   };
