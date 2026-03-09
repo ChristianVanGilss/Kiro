@@ -8,7 +8,7 @@
       }
     },
     {
-      "src": "api/*.ts",
+      "src": "api/send-feedback.ts",
       "use": "@vercel/node"
     }
   ],
