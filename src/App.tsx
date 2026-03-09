@@ -802,7 +802,7 @@ export default function App() {
           />
         )}
         {activeTab === 'tutorial' ? (
-          <TutorialScreen onStart={() => setActiveTab('mission')} />
+          <TutorialScreen onStart={() => setActiveTab(isDesigner ? 'mission' : 'mobilePlay')} />
         ) : activeTab === 'feedback' ? (
           <FeedbackPage onBack={() => setActiveTab(isDesigner ? 'mission' : 'mobilePlay')} />
         ) : activeTab === 'mission' ? (
@@ -2030,7 +2030,23 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
       return;
     }
 
-    const correctPos = puzzle?.solution[selectedTileForMove];
+    let correctPos = puzzle?.solution[selectedTileForMove];
+    
+    // Special handling for blockers since they are generic
+    if (!correctPos && selectedTileForMove.startsWith('blocker-')) {
+      const blockerLocations = Object.keys(puzzle?.solution || {})
+        .filter(k => k.startsWith('blocker-'))
+        .map(k => puzzle.solution[k]);
+      
+      // Find a blocker location that doesn't have a blocker placed on it yet
+      correctPos = blockerLocations.find(loc => {
+        const isOccupied = Object.keys(placedTiles).some(k => 
+          k.startsWith('blocker-') && placedTiles[k]?.r === loc.r && placedTiles[k]?.c === loc.c
+        );
+        return !isOccupied;
+      }) || blockerLocations[0];
+    }
+
     if (correctPos) {
       setHighlightedCell(correctPos);
       setTimer(prev => prev + 60); // Penalty
@@ -2427,14 +2443,17 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
                                 setSelectedTileForMove(tileId);
                               }
                             }}
-                            className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center relative transition-all duration-500 border-b border-r border-ink/10 bg-parchment hover:bg-parchment-dark ${selectedTileForMove && !tileId ? 'cursor-pointer hover:bg-crimson/5' : ''} ${isHighlighted ? 'ring-4 ring-emerald-400 bg-emerald-100 z-30' : ''} ${isCelebrating ? 'z-40' : ''}`}
-                            style={{ 
-                              transform: isCelebrating ? 'translateY(-8px)' : 'none',
-                              boxShadow: isCelebrating ? '0 10px 20px rgba(0,0,0,0.2)' : 'none'
-                            }}
-                          >
-                            <div className="absolute inset-1 border border-ink/5 pointer-events-none"></div>
-                            {isCelebrating && (
+                      className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center relative transition-all duration-500 border-b border-r border-ink/10 bg-parchment hover:bg-parchment-dark ${selectedTileForMove && !tileId ? 'cursor-pointer hover:bg-crimson/5' : ''} ${isCelebrating ? 'z-40' : ''}`}
+                      style={{ 
+                        transform: isCelebrating ? 'translateY(-8px)' : 'none',
+                        boxShadow: isCelebrating ? '0 10px 20px rgba(0,0,0,0.2)' : 'none'
+                      }}
+                    >
+                      <div className="absolute inset-1 border border-ink/5 pointer-events-none"></div>
+                      {isHighlighted && (
+                        <div className="absolute inset-0 z-[70] ring-4 ring-emerald-500 shadow-[0_0_30px_rgba(16,185,129,1)] pointer-events-none animate-pulse rounded-sm"></div>
+                      )}
+                      {isCelebrating && (
                               <div className={`absolute inset-0 bg-gold/20 mix-blend-overlay z-20 animate-pulse transition-opacity duration-500 ${isCurrentCelebration ? 'opacity-100' : 'opacity-40'}`}></div>
                             )}
                             {isIncorrect && (
@@ -2694,7 +2713,23 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
       return;
     }
 
-    const correctPos = puzzle?.solution[selectedTileForMove];
+    let correctPos = puzzle?.solution[selectedTileForMove];
+    
+    // Special handling for blockers since they are generic
+    if (!correctPos && selectedTileForMove.startsWith('blocker-')) {
+      const blockerLocations = Object.keys(puzzle?.solution || {})
+        .filter(k => k.startsWith('blocker-'))
+        .map(k => puzzle.solution[k]);
+      
+      // Find a blocker location that doesn't have a blocker placed on it yet
+      correctPos = blockerLocations.find(loc => {
+        const isOccupied = Object.keys(placedTiles).some(k => 
+          k.startsWith('blocker-') && placedTiles[k]?.r === loc.r && placedTiles[k]?.c === loc.c
+        );
+        return !isOccupied;
+      }) || blockerLocations[0];
+    }
+
     if (correctPos) {
       setHighlightedCell(correctPos);
       setTimer(prev => prev + 60); // Penalty
@@ -2970,6 +3005,16 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
         <div className="absolute top-14 left-0 right-0 bg-parchment border-b border-ink/10 shadow-lg z-40 p-4 flex flex-col gap-3 animate-in slide-in-from-top-2">
           <button 
             onClick={() => {
+              onNavigate('tutorial');
+              setIsMobileMenuOpen(false);
+            }}
+            className="flex items-center gap-3 px-4 py-3 bg-gold/10 rounded-sm text-sm font-bold text-ink hover:bg-gold/20 transition-colors"
+          >
+            <BookOpen className="w-4 h-4 text-gold" />
+            The Legend (Tutorial)
+          </button>
+          <button 
+            onClick={() => {
               onNavigate('feedback');
               setIsMobileMenuOpen(false);
             }}
@@ -3032,7 +3077,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
           <div className="flex w-full">
             <div className="w-10 shrink-0"></div>
             <div className="flex-1 px-1">
-              <div className="grid w-full" style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` }}>
+              <div className="grid w-full gap-1" style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` }}>
                 {colLabels.slice(0, size).map((label: string, i: number) => (
                   <div key={i} className="flex justify-center items-end h-8 w-10 pb-1">
                     {getIconForLabel(label)}
@@ -3044,7 +3089,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
           </div>
           
           <div className="flex w-full">
-            <div className="w-10 flex flex-col shrink-0 mt-1">
+            <div className="w-10 grid gap-1 shrink-0 mt-1" style={{ gridTemplateRows: `repeat(${size}, minmax(0, 1fr))` }}>
               {rowLabels.slice(0, size).map((label: string, i: number) => (
                 <div key={i} className="h-10 flex items-center justify-end pr-2">
                   {getIconForLabel(label)}
@@ -3072,7 +3117,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
                   return (
                     <div 
                       key={idx} 
-                      className={`w-10 h-10 bg-parchment rounded-sm border flex items-center justify-center relative transition-all duration-500 ${selectedTileForMove ? 'hover:bg-ink/5 cursor-pointer' : ''} ${tileId ? 'border-transparent shadow-sm' : 'border-ink/10'} ${isHighlighted ? 'ring-4 ring-emerald-400 bg-emerald-100 z-30' : ''} ${isCelebrating ? 'z-40' : ''}`}
+                      className={`w-10 h-10 bg-parchment rounded-sm border flex items-center justify-center relative transition-all duration-500 ${selectedTileForMove ? 'hover:bg-ink/5 cursor-pointer' : ''} ${tileId ? 'border-transparent shadow-sm' : 'border-ink/10'} ${isCelebrating ? 'z-40' : ''}`}
                       style={{ 
                         transform: isCelebrating ? 'translateY(-6px)' : 'none',
                         boxShadow: isCelebrating ? '0 8px 16px rgba(0,0,0,0.2)' : 'none'
@@ -3087,9 +3132,14 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
                         if (selectedTileForMove) {
                           handleDrop(selectedTileForMove, r, c);
                           if (!isPencilMode) setSelectedTileForMove(null);
+                        } else if (tileId) {
+                          setSelectedTileForMove(tileId);
                         }
                       }}
                     >
+                      {isHighlighted && (
+                        <div className="absolute inset-0 z-[70] ring-4 ring-emerald-500 shadow-[0_0_30px_rgba(16,185,129,1)] pointer-events-none animate-pulse rounded-sm"></div>
+                      )}
                       {isCelebrating && (
                         <div className={`absolute inset-0 bg-gold/20 mix-blend-overlay z-20 animate-pulse transition-opacity duration-500 ${isCurrentCelebration ? 'opacity-100' : 'opacity-40'}`}></div>
                       )}
