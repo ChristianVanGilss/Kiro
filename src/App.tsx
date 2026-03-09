@@ -1928,6 +1928,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
   const [isOrderRevealed, setIsOrderRevealed] = useState(false);
   const [celebrationIndex, setCelebrationIndex] = useState<number | null>(null);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (celebrationIndex !== null && puzzle) {
@@ -2017,16 +2018,23 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
   }, [puzzle, placedTiles, size]);
 
   const handleHint = () => {
-    if (selectedTileForMove) {
-      const correctPos = puzzle?.solution[selectedTileForMove];
-      if (correctPos) {
-        setHighlightedCell(correctPos);
-        setTimer(prev => prev + 60); // Penalty
-        setTimeout(() => setHighlightedCell(null), 3000);
-      }
-    } else {
-      setIsHintMode(!isHintMode);
-      if (!isHintMode) setIsPencilMode(false);
+    if (!selectedTileForMove) {
+      setToastMessage("Please select a tile first to get a hint.");
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    if (isHintMode) {
+      setIsHintMode(false);
+      setHighlightedCell(null);
+      return;
+    }
+
+    const correctPos = puzzle?.solution[selectedTileForMove];
+    if (correctPos) {
+      setHighlightedCell(correctPos);
+      setTimer(prev => prev + 60); // Penalty
+      setIsHintMode(true);
     }
   };
 
@@ -2091,31 +2099,8 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
     setIncorrectCells([]);
     
     if (isHintMode) {
-      if (r !== null && c !== null) {
-        // Verify placed tile
-        const correctPos = puzzle?.solution[tileId];
-        const isCorrect = correctPos && correctPos.r === r && correctPos.c === c;
-        setHintFeedback({ id: tileId, status: isCorrect ? 'correct' : 'incorrect' });
-        setTimer(prev => prev + 30);
-        setTimeout(() => setHintFeedback(null), 2000);
-      } else {
-        // Reveal unplaced tile
-        const correctPos = puzzle?.solution[tileId];
-        if (correctPos) {
-          setPlacedTiles(prev => {
-            const next = { ...prev };
-            const existingTile = Object.keys(next).find(k => next[k]?.r === correctPos.r && next[k]?.c === correctPos.c);
-            if (existingTile) next[existingTile] = null;
-            next[tileId] = { r: correctPos.r, c: correctPos.c };
-            return next;
-          });
-          setTimer(prev => prev + 60);
-          setHintFeedback({ id: tileId, status: 'correct' });
-          setTimeout(() => setHintFeedback(null), 2000);
-        }
-      }
       setIsHintMode(false);
-      return;
+      setHighlightedCell(null);
     }
 
     if (isPencilMode && r !== null && c !== null) {
@@ -2170,15 +2155,21 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
       </div>
     ) : null;
 
+    const handleTileClick = () => {
+      if (selectedTileForMove === tileId) setSelectedTileForMove(null);
+      else setSelectedTileForMove(tileId);
+      if (isHintMode) {
+        setIsHintMode(false);
+        setHighlightedCell(null);
+      }
+    };
+
     if (tileId.startsWith('blocker-')) {
       return (
         <div 
           draggable
           onDragStart={(e) => e.dataTransfer.setData('text/plain', tileId)}
-          onClick={() => {
-            if (selectedTileForMove === tileId) setSelectedTileForMove(null);
-            else setSelectedTileForMove(tileId);
-          }}
+          onClick={handleTileClick}
           className={`w-full h-full rounded-sm bg-ink/80 flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md border ${selectedTileForMove === tileId ? 'border-crimson ring-2 ring-crimson/50' : 'border-ink'} ${opacityClass} relative overflow-hidden`}
         >
           <span className="text-[12px] font-mono text-parchment/60 font-bold">S</span>
@@ -2193,10 +2184,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
         <div 
           draggable
           onDragStart={(e) => e.dataTransfer.setData('text/plain', tileId)}
-          onClick={() => {
-            if (selectedTileForMove === tileId) setSelectedTileForMove(null);
-            else setSelectedTileForMove(tileId);
-          }}
+          onClick={handleTileClick}
           className={`w-full h-full flex items-center justify-center bg-parchment cursor-grab active:cursor-grabbing shadow-md border ${selectedTileForMove === tileId ? 'border-crimson ring-2 ring-crimson/50' : 'border-ink/20'} relative overflow-hidden ${opacityClass}`}
         >
           <div className="absolute inset-1 border border-ink/5 pointer-events-none"></div>
@@ -2222,10 +2210,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
       <div 
         draggable
         onDragStart={(e) => e.dataTransfer.setData('text/plain', tileId)}
-        onClick={() => {
-          if (selectedTileForMove === tileId) setSelectedTileForMove(null);
-          else setSelectedTileForMove(tileId);
-        }}
+        onClick={handleTileClick}
         className={`w-full h-full flex flex-col items-center justify-center bg-parchment cursor-grab active:cursor-grabbing shadow-md border ${selectedTileForMove === tileId ? 'border-crimson ring-2 ring-crimson/50' : 'border-gold/40'} relative overflow-hidden ${opacityClass}`}
       >
         <div className="absolute inset-1 border border-gold/20 pointer-events-none"></div>
@@ -2237,6 +2222,11 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
 
   return (
     <div className="h-full flex flex-col relative">
+      {toastMessage && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-ink text-parchment px-4 py-2 rounded shadow-lg font-sans text-sm animate-in fade-in slide-in-from-top-4">
+          {toastMessage}
+        </div>
+      )}
       <header className="px-4 md:px-8 py-4 md:py-6 border-b border-ink/10 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-parchment/80 sticky top-0 z-10 backdrop-blur-md">
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -2602,6 +2592,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
   const [isOrderRevealed, setIsOrderRevealed] = useState(false);
   const [celebrationIndex, setCelebrationIndex] = useState<number | null>(null);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (celebrationIndex !== null && puzzle) {
@@ -2691,16 +2682,23 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
   }, [puzzle, placedTiles, size]);
 
   const handleHint = () => {
-    if (selectedTileForMove) {
-      const correctPos = puzzle?.solution[selectedTileForMove];
-      if (correctPos) {
-        setHighlightedCell(correctPos);
-        setTimer(prev => prev + 60); // Penalty
-        setTimeout(() => setHighlightedCell(null), 3000);
-      }
-    } else {
-      setIsHintMode(!isHintMode);
-      if (!isHintMode) setIsPencilMode(false);
+    if (!selectedTileForMove) {
+      setToastMessage("Please select a tile first to get a hint.");
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    if (isHintMode) {
+      setIsHintMode(false);
+      setHighlightedCell(null);
+      return;
+    }
+
+    const correctPos = puzzle?.solution[selectedTileForMove];
+    if (correctPos) {
+      setHighlightedCell(correctPos);
+      setTimer(prev => prev + 60); // Penalty
+      setIsHintMode(true);
     }
   };
 
@@ -2769,31 +2767,8 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
     setIncorrectCells([]);
     
     if (isHintMode) {
-      if (r !== null && c !== null) {
-        // Verify placed tile
-        const correctPos = puzzle?.solution[tileId];
-        const isCorrect = correctPos && correctPos.r === r && correctPos.c === c;
-        setHintFeedback({ id: tileId, status: isCorrect ? 'correct' : 'incorrect' });
-        setTimer(prev => prev + 30);
-        setTimeout(() => setHintFeedback(null), 2000);
-      } else {
-        // Reveal unplaced tile
-        const correctPos = puzzle?.solution[tileId];
-        if (correctPos) {
-          setPlacedTiles(prev => {
-            const next = { ...prev };
-            const existingTile = Object.keys(next).find(k => next[k]?.r === correctPos.r && next[k]?.c === correctPos.c);
-            if (existingTile) next[existingTile] = null;
-            next[tileId] = { r: correctPos.r, c: correctPos.c };
-            return next;
-          });
-          setTimer(prev => prev + 60);
-          setHintFeedback({ id: tileId, status: 'correct' });
-          setTimeout(() => setHintFeedback(null), 2000);
-        }
-      }
       setIsHintMode(false);
-      return;
+      setHighlightedCell(null);
     }
 
     if (isPencilMode && r !== null && c !== null) {
@@ -2848,15 +2823,21 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
       </div>
     ) : null;
 
+    const handleTileClick = () => {
+      if (selectedTileForMove === tileId) setSelectedTileForMove(null);
+      else setSelectedTileForMove(tileId);
+      if (isHintMode) {
+        setIsHintMode(false);
+        setHighlightedCell(null);
+      }
+    };
+
     if (tileId.startsWith('blocker-')) {
       return (
         <div 
           draggable
           onDragStart={(e) => e.dataTransfer.setData('text/plain', tileId)}
-          onClick={() => {
-            if (selectedTileForMove === tileId) setSelectedTileForMove(null);
-            else setSelectedTileForMove(tileId);
-          }}
+          onClick={handleTileClick}
           className={`w-full h-full rounded-sm bg-ink/80 flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md border ${selectedTileForMove === tileId ? 'border-crimson ring-2 ring-crimson/50' : 'border-ink'} ${opacityClass} relative overflow-hidden`}
         >
           <span className="text-[12px] font-mono text-parchment/60 font-bold">S</span>
@@ -2871,10 +2852,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
         <div 
           draggable
           onDragStart={(e) => e.dataTransfer.setData('text/plain', tileId)}
-          onClick={() => {
-            if (selectedTileForMove === tileId) setSelectedTileForMove(null);
-            else setSelectedTileForMove(tileId);
-          }}
+          onClick={handleTileClick}
           className={`w-full h-full flex items-center justify-center bg-parchment cursor-grab active:cursor-grabbing shadow-md border ${selectedTileForMove === tileId ? 'border-crimson ring-2 ring-crimson/50' : 'border-ink/20'} relative overflow-hidden ${opacityClass}`}
         >
           <div className="absolute inset-1 border border-ink/5 pointer-events-none"></div>
@@ -2900,10 +2878,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
       <div 
         draggable
         onDragStart={(e) => e.dataTransfer.setData('text/plain', tileId)}
-        onClick={() => {
-          if (selectedTileForMove === tileId) setSelectedTileForMove(null);
-          else setSelectedTileForMove(tileId);
-        }}
+        onClick={handleTileClick}
         className={`w-full h-full flex flex-col items-center justify-center bg-parchment cursor-grab active:cursor-grabbing shadow-md border ${selectedTileForMove === tileId ? 'border-crimson ring-2 ring-crimson/50' : 'border-gold/40'} relative overflow-hidden ${opacityClass}`}
       >
         <div className="absolute inset-1 border border-gold/20 pointer-events-none"></div>
@@ -2946,6 +2921,11 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
 
   return (
     <div className="h-full flex flex-col relative bg-parchment">
+      {toastMessage && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-ink text-parchment px-4 py-2 rounded shadow-lg font-sans text-sm animate-in fade-in slide-in-from-top-4 w-11/12 text-center">
+          {toastMessage}
+        </div>
+      )}
       {/* Mobile Header */}
       <div className="flex-none h-14 bg-parchment border-b border-ink/10 flex items-center justify-between px-3 z-50">
         <div className="flex items-center gap-2">
