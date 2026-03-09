@@ -71,6 +71,30 @@ type Tab = 'mission' | 'variables' | 'play' | 'mobilePlay' | 'tutorial' | 'feedb
 const ROW_LABELS = ['Sun', 'Moon', 'Star', 'Cloud', 'Rain', 'Lightning', 'Wind', 'Frost', 'Eclipse'];
 const COL_LABELS = ['Dragon', 'Pelican', 'Tiger', 'Fox', 'Monkey', 'Koi', 'Mantis', 'Turtoise', 'Kirin'];
 
+const WEATHER_ICONS_MAP: Record<string, any> = {
+  'Sun': GiSun,
+  'Moon': GiMoon,
+  'Star': GiStarSwirl,
+  'Cloud': GiCloudRing,
+  'Rain': GiRaining,
+  'Lightning': GiLightningTear,
+  'Wind': GiWhirlwind,
+  'Frost': GiSnowflake1,
+  'Eclipse': GiEclipse
+};
+
+const ANIMAL_ICONS_MAP: Record<string, any> = {
+  'Dragon': GiDragonHead,
+  'Pelican': GiEatingPelican,
+  'Tiger': GiTigerHead,
+  'Fox': GiFoxHead,
+  'Monkey': GiMonkey,
+  'Koi': GiCirclingFish,
+  'Mantis': GiPrayingMantis,
+  'Turtoise': GiTurtle,
+  'Kirin': GiUnicorn
+};
+
 const ROLES = [
   { name: 'The Celestial Architect', title: 'Ten-no-Kenshitsusha', icon: Cloud },
   { name: 'The Earth Tracker', title: 'Chi-no-Tsuiseki', icon: PawPrint },
@@ -483,6 +507,24 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
       ]
     },
     {
+      title: "The Archive Index",
+      text: "Familiarize yourself with the sacred symbols of Kiro Fort. Each icon represents a vital element of your mission.",
+      isIndex: true,
+      board: []
+    },
+    {
+      title: "The Weather Elements",
+      text: "The rows of the Archive are governed by the celestial elements. These symbols mark your vertical position within the fort.",
+      isWeatherIndex: true,
+      board: []
+    },
+    {
+      title: "The Spirit Animals",
+      text: "The columns are guarded by the Great Spirits. These animal icons mark your horizontal position within the fort.",
+      isAnimalIndex: true,
+      board: []
+    },
+    {
       title: "Your Mission Begins",
       text: "Use the clues, place your pencil marks, and deduce the one true path. The Archive awaits.",
       instruction: "Good luck, shadow operative.",
@@ -588,7 +630,65 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
 
           {/* Right: Board Visualization */}
           <div className="flex justify-center">
-            <div className="relative p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111] transform rotate-1 hover:rotate-0 transition-transform duration-700">
+            {currentStep.isIndex ? (
+              <div className="max-w-md w-full grid grid-cols-3 gap-4 p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111]">
+                <div className="flex flex-col items-center gap-2 p-3 bg-white/5 rounded-sm border border-white/10">
+                  <div className="w-12 h-12 bg-[#8b0000] rounded-sm flex items-center justify-center border border-[#5a0000] shadow-lg">
+                    <MapPin className="w-8 h-8 text-[#d4af37]" />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">Torii Gate</span>
+                </div>
+                <div className="flex flex-col items-center gap-2 p-3 bg-white/5 rounded-sm border border-white/10">
+                  <div className="w-12 h-12 bg-[#2c241b] rounded-sm flex items-center justify-center border border-[#111] shadow-lg">
+                    <DoorOpen className="w-8 h-8 text-[#d4af37]" />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">Passage</span>
+                </div>
+                <div className="flex flex-col items-center gap-2 p-3 bg-white/5 rounded-sm border border-white/10">
+                  <div className="w-12 h-12 bg-[#111] rounded-sm flex items-center justify-center border border-[#333] shadow-lg">
+                    <span className="text-xl font-mono text-white/30 font-bold">S</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">Secret Room</span>
+                </div>
+                {SACRED_ITEMS_POOL.map((item: any) => (
+                  <div key={item.id} className="flex flex-col items-center gap-2 p-3 bg-white/5 rounded-sm border border-white/10">
+                    <div className="w-12 h-12 bg-[#8b0000] rounded-sm flex items-center justify-center border border-[#5a0000] shadow-lg">
+                      <item.icon className="w-6 h-6 text-[#d4af37]" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">{item.name}</span>
+                  </div>
+                ))}
+              </div>
+            ) : currentStep.isWeatherIndex ? (
+              <div className="max-w-md w-full grid grid-cols-3 gap-4 p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111]">
+                {ROW_LABELS.map((label) => {
+                  const Icon = WEATHER_ICONS_MAP[label];
+                  return (
+                    <div key={label} className="flex flex-col items-center gap-2 p-3 bg-white/5 rounded-sm border border-white/10">
+                      <div className="w-12 h-12 bg-[#1a1412] rounded-sm flex items-center justify-center border border-white/5 shadow-lg">
+                        <Icon className="w-6 h-6 text-[#d4af37]/60" />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : currentStep.isAnimalIndex ? (
+              <div className="max-w-md w-full grid grid-cols-3 gap-4 p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111]">
+                {COL_LABELS.map((label) => {
+                  const Icon = ANIMAL_ICONS_MAP[label];
+                  return (
+                    <div key={label} className="flex flex-col items-center gap-2 p-3 bg-white/5 rounded-sm border border-white/10">
+                      <div className="w-12 h-12 bg-[#1a1412] rounded-sm flex items-center justify-center border border-white/5 shadow-lg">
+                        <Icon className="w-6 h-6 text-[#d4af37]/60" />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="relative p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111] transform rotate-1 hover:rotate-0 transition-transform duration-700">
               {/* Wooden board texture */}
               <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent 0px, transparent 20px, rgba(0,0,0,0.1) 20px, rgba(0,0,0,0.1) 22px)' }}></div>
               
@@ -666,7 +766,8 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
                 })}
               </div>
             </div>
-          </div>
+          )}
+        </div>
 
         </div>
       </div>
