@@ -23,16 +23,17 @@ async function startServer() {
     }
 
     try {
-      await resend.emails.send({
+      const result = await resend.emails.send({
         from: "info@kiro.today",
         to: "info@kiro.today",
         subject: `KIRO Feedback from ${name}`,
         text: `Name: ${name}\n\nFeedback:\n${feedback}`,
       });
+      console.log("Resend result:", result);
       res.status(200).json({ message: "Feedback sent successfully" });
     } catch (error) {
       console.error("Error sending email:", error);
-      res.status(500).json({ error: "Failed to send feedback" });
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to send feedback" });
     }
   });
 

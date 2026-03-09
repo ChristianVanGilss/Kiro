@@ -94,8 +94,9 @@ function FeedbackPage({ onBack }: { onBack: () => void }) {
         body: JSON.stringify({ name, feedback }),
       });
 
+      const data = await response.json();
       if (!response.ok) {
-        throw new Error('Failed to send feedback');
+        throw new Error(data.error || 'Failed to send feedback');
       }
 
       setIsSent(true);
@@ -105,7 +106,7 @@ function FeedbackPage({ onBack }: { onBack: () => void }) {
       }, 3000);
     } catch (error) {
       console.error('Error sending feedback:', error);
-      alert('Failed to send feedback. Please try again later.');
+      alert(error instanceof Error ? error.message : 'Failed to send feedback. Please try again later.');
     }
   };
 
