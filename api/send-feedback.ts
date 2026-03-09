@@ -10,17 +10,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Ensure body is parsed
-  const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-  const { name, feedback } = body;
-
-  console.log('Request body:', { name, feedback });
-
-  if (!name || !feedback) {
-    return res.status(400).json({ error: 'Name and feedback are required' });
-  }
-
   try {
+    // Ensure body is parsed
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const { name, feedback } = body;
+
+    console.log('Request body:', { name, feedback });
+
+    if (!name || !feedback) {
+      return res.status(400).json({ error: 'Name and feedback are required' });
+    }
+
     const result = await resend.emails.send({
       from: 'info@kiro.today',
       to: 'info@kiro.today',
@@ -31,9 +31,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('Resend result:', result);
     return res.status(200).json({ message: 'Feedback sent successfully' });
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Error in API handler:', error);
+    // Ensure we always return JSON
     return res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Failed to send feedback' 
+      error: error instanceof Error ? error.message : 'Internal Server Error' 
     });
   }
 }
