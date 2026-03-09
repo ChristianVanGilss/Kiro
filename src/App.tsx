@@ -86,7 +86,11 @@ function FeedbackPage({ onBack }: { onBack: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/send-feedback', {
+      // Use the full URL to ensure we hit the correct endpoint
+      const apiUrl = window.location.origin + '/api/send-feedback';
+      console.log("Sending request to:", apiUrl);
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
