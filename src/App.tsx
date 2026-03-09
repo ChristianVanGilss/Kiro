@@ -94,9 +94,21 @@ function FeedbackPage({ onBack }: { onBack: () => void }) {
         body: JSON.stringify({ name, feedback }),
       });
 
-      const data = await response.json();
+      // Read the raw text first to see what the server actually sent
+      const rawText = await response.text();
+      console.log("Raw server response:", rawText);
+
+      let data;
+      try {
+        // Try to parse it as JSON
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch (parseError) {
+        console.error("Failed to parse JSON:", parseError);
+        throw new Error(`Server returned an invalid response (Status: ${response.status}). Check console for details.`);
+      }
+
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send feedback');
+        throw new Error(data.error || `Failed to send feedback (Status: ${response.status})`);
       }
 
       setIsSent(true);
