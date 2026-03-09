@@ -4,11 +4,17 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log('API route called. Method:', req.method);
+  
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { name, feedback } = req.body;
+  // Ensure body is parsed
+  const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  const { name, feedback } = body;
+
+  console.log('Request body:', { name, feedback });
 
   if (!name || !feedback) {
     return res.status(400).json({ error: 'Name and feedback are required' });
