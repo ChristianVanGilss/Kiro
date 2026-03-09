@@ -28,6 +28,7 @@ import {
   Map,
   Menu,
   X,
+  Minus,
   Smartphone,
   Sun,
   Moon,
@@ -419,6 +420,24 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
       ]
     },
     {
+      title: "The Art of Deduction",
+      text: "Mastering the Pencil Tool is the key to solving complex archives. Follow this strategy to systematically narrow down the path:",
+      strategy: [
+        { text: "1. Read a clue and mark potential Secret Rooms (Blockers) using the pencil icon.", icon: <Stamp className="w-4 h-4" /> },
+        { text: "2. Use the '-' mark for rows or cells where you know no relics can exist.", icon: <Minus className="w-4 h-4" /> },
+        { text: "3. Mark columns with specific relics mentioned in clues, excluding 'Safe' rows.", icon: <Flame className="w-4 h-4" /> },
+        { text: "4. Cross out clues as you use them to keep your mind clear.", icon: <CheckCircle2 className="w-4 h-4" /> }
+      ],
+      instruction: "Think like a shadow operative.",
+      board: [
+        { r: 0, c: 0, type: 'torii' },
+        { r: 2, c: 2, type: 'passage' },
+        { r: 0, c: 1, marks: ['blocker'] },
+        { r: 1, c: 0, marks: ['no-relic-mark'] },
+        { r: 1, c: 2, marks: ['Lantern'] }
+      ]
+    },
+    {
       title: "The Golden Rules",
       text: "Every mission is governed by absolute laws. Memorize them, for they are the key to your escape:",
       rules: [
@@ -525,6 +544,21 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
               </div>
             )}
 
+            {currentStep.strategy && (
+              <div className="space-y-4 mt-6">
+                {currentStep.strategy.map((item: any, idx: number) => (
+                  <div key={idx} className="flex items-start gap-4 p-3 bg-white/5 border border-white/10 rounded-sm animate-in slide-in-from-left duration-500" style={{ animationDelay: `${idx * 200}ms` }}>
+                    <div className="mt-1 p-2 bg-[#d4af37]/20 rounded-full text-[#d4af37]">
+                      {item.icon}
+                    </div>
+                    <p className="text-sm leading-relaxed text-[#e6d5ac]/90">
+                      {item.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="pt-8 flex items-center gap-4">
               {step > 0 && (
                 <button 
@@ -596,10 +630,11 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
                           cellData.type === 'blocker' ? 'bg-[#111] border-2 border-[#333]' : 
                           cellData.type === 'torii' ? 'bg-[#8b0000] border-2 border-[#5a0000]' :
                           cellData.type === 'passage' ? 'bg-[#2c241b] border-2 border-[#111]' :
-                          'bg-[#8b0000] border-2 border-[#5a0000]' // Relics
+                          cellData.type === 'relic' ? 'bg-[#8b0000] border-2 border-[#5a0000]' :
+                          'bg-transparent border-0 shadow-none' // For marks only
                         }`}>
                           {/* Tile highlight */}
-                          <div className="absolute inset-0 border-t border-l border-white/20 pointer-events-none"></div>
+                          {cellData.type && <div className="absolute inset-0 border-t border-l border-white/20 pointer-events-none"></div>}
                           
                           {cellData.type === 'torii' && <MapPin className="w-8 h-8 text-[#d4af37]" />}
                           {cellData.type === 'passage' && <DoorOpen className="w-8 h-8 text-[#d4af37]" />}
@@ -610,6 +645,19 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
                               {cellData.item === 'Sword' && <Swords className="w-6 h-6 text-[#d4af37] mb-1" />}
                               <span className="text-[8px] font-bold uppercase tracking-widest text-[#d4af37]">{cellData.item}</span>
                             </>
+                          )}
+
+                          {cellData.marks && cellData.marks.length > 0 && (
+                            <div className="absolute inset-0 p-1 flex flex-wrap content-start justify-start gap-[2px] z-40">
+                              {cellData.marks.map((markId: string) => {
+                                if (markId === 'safe-mark') return <div key={markId} className="w-4 h-4 flex items-center justify-center bg-emerald-500/20 rounded-sm"><span className="text-[12px] font-mono font-bold text-emerald-400 leading-none">x</span></div>;
+                                if (markId === 'no-relic-mark') return <div key={markId} className="w-4 h-4 flex items-center justify-center bg-slate-500/20 rounded-sm"><span className="text-[12px] font-mono font-bold text-slate-400 leading-none">-</span></div>;
+                                if (markId === 'blocker') return <div key={markId} className="w-4 h-4 bg-[#111] rounded-sm flex items-center justify-center border border-white/10"><span className="text-[8px] font-mono text-white/50 font-bold leading-none">S</span></div>;
+                                if (markId === 'Lantern') return <div key={markId} className="w-4 h-4 flex items-center justify-center bg-[#8b0000]/30 rounded-sm"><Flame className="w-3 h-3 text-[#d4af37]" /></div>;
+                                if (markId === 'Sword') return <div key={markId} className="w-4 h-4 flex items-center justify-center bg-[#8b0000]/30 rounded-sm"><Swords className="w-3 h-3 text-[#d4af37]" /></div>;
+                                return null;
+                              })}
+                            </div>
                           )}
                         </div>
                       )}
