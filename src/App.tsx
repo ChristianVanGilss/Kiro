@@ -1054,6 +1054,10 @@ function GridMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
   const [celebrationIndex, setCelebrationIndex] = useState<number | null>(null);
 
   const size = selectedTier.size;
+  
+  useEffect(() => {
+    setCelebrationIndex(null);
+  }, [puzzle]);
 
   useEffect(() => {
     if (celebrationIndex !== null && puzzle) {
@@ -1268,7 +1272,10 @@ function GridMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
         </div>
         <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
           <button 
-            onClick={() => onRegenerate()}
+            onClick={() => {
+              setCelebrationIndex(null);
+              onRegenerate();
+            }}
             className="flex-1 md:flex-none justify-center flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 border border-ink/20 text-ink hover:bg-ink/5 rounded-sm text-xs md:text-sm font-medium transition-colors"
           >
             <RefreshCw className="w-3 h-3 md:w-4 md:h-4" />
@@ -2105,6 +2112,35 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!puzzle) return;
+    const initial: Record<string, {r: number, c: number} | null> = {};
+    const items = ['Torii', ...itemLabels.slice(0, selectedTier.items), 'Passage'];
+    items.forEach(item => initial[item] = null);
+    for (let i = 0; i < secretRooms; i++) {
+      initial[`blocker-${i}`] = null;
+    }
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const cell = puzzle.grid[r][c];
+        if (cell.n && !cell.i) {
+          initial[`number-${cell.n}`] = null;
+        }
+      }
+    }
+    setPlacedTiles(initial);
+    setCheckStatus('idle');
+    setPencilMarks({});
+    setIsPencilMode(false);
+    setHighlightedCell(null);
+    setTimer(0);
+    setIsTimerRunning(false);
+    setIncorrectCells([]);
+    setIsOrderRevealed(false);
+    setCelebrationIndex(null);
+    setShowSuccessOverlay(false);
+  }, [puzzle, selectedTier, itemLabels, secretRooms, size]);
+
+  useEffect(() => {
     if (celebrationIndex !== null && puzzle) {
       if (celebrationIndex < puzzle.path.length) {
         const timeout = setTimeout(() => {
@@ -2140,35 +2176,6 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
-
-  useEffect(() => {
-    if (!puzzle) return;
-    const initial: Record<string, {r: number, c: number} | null> = {};
-    const items = ['Torii', ...itemLabels.slice(0, selectedTier.items), 'Passage'];
-    items.forEach(item => initial[item] = null);
-    for (let i = 0; i < secretRooms; i++) {
-      initial[`blocker-${i}`] = null;
-    }
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        const cell = puzzle.grid[r][c];
-        if (cell.n && !cell.i) {
-          initial[`number-${cell.n}`] = null;
-        }
-      }
-    }
-    setPlacedTiles(initial);
-    setCheckStatus('idle');
-    setPencilMarks({});
-    setIsPencilMode(false);
-    setHighlightedCell(null);
-    setTimer(0);
-    setIsTimerRunning(false);
-    setIncorrectCells([]);
-    setIsOrderRevealed(false);
-    setCelebrationIndex(null);
-    setShowSuccessOverlay(false);
-  }, [puzzle, selectedTier, itemLabels, secretRooms, size]);
 
   const isSolved = React.useMemo(() => {
     if (!puzzle || Object.keys(placedTiles).length === 0) return false;
@@ -2529,6 +2536,8 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
               <button 
                 onClick={() => {
                   setCheckStatus('idle');
+                  setCelebrationIndex(null);
+                  setShowSuccessOverlay(false);
                   onRegenerate();
                 }}
                 className="w-full py-3 bg-ink hover:bg-ink-dark text-parchment font-semibold rounded-sm transition-colors shadow-sm flex items-center justify-center gap-2"
@@ -2812,6 +2821,35 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!puzzle) return;
+    const initial: Record<string, {r: number, c: number} | null> = {};
+    const items = ['Torii', ...itemLabels.slice(0, selectedTier.items), 'Passage'];
+    items.forEach(item => initial[item] = null);
+    for (let i = 0; i < secretRooms; i++) {
+      initial[`blocker-${i}`] = null;
+    }
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const cell = puzzle.grid[r][c];
+        if (cell.n && !cell.i) {
+          initial[`number-${cell.n}`] = null;
+        }
+      }
+    }
+    setPlacedTiles(initial);
+    setCheckStatus('idle');
+    setPencilMarks({});
+    setIsPencilMode(false);
+    setHighlightedCell(null);
+    setTimer(0);
+    setIsTimerRunning(false);
+    setIncorrectCells([]);
+    setIsOrderRevealed(false);
+    setCelebrationIndex(null);
+    setShowSuccessOverlay(false);
+  }, [puzzle, selectedTier, itemLabels, secretRooms, size]);
+
+  useEffect(() => {
     if (celebrationIndex !== null && puzzle) {
       if (celebrationIndex < puzzle.path.length) {
         const timeout = setTimeout(() => {
@@ -2847,35 +2885,6 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
-
-  useEffect(() => {
-    if (!puzzle) return;
-    const initial: Record<string, {r: number, c: number} | null> = {};
-    const items = ['Torii', ...itemLabels.slice(0, selectedTier.items), 'Passage'];
-    items.forEach(item => initial[item] = null);
-    for (let i = 0; i < secretRooms; i++) {
-      initial[`blocker-${i}`] = null;
-    }
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        const cell = puzzle.grid[r][c];
-        if (cell.n && !cell.i) {
-          initial[`number-${cell.n}`] = null;
-        }
-      }
-    }
-    setPlacedTiles(initial);
-    setCheckStatus('idle');
-    setPencilMarks({});
-    setIsPencilMode(false);
-    setHighlightedCell(null);
-    setTimer(0);
-    setIsTimerRunning(false);
-    setIncorrectCells([]);
-    setIsOrderRevealed(false);
-    setCelebrationIndex(null);
-    setShowSuccessOverlay(false);
-  }, [puzzle, selectedTier, itemLabels, secretRooms, size]);
 
   const isSolved = React.useMemo(() => {
     if (!puzzle || Object.keys(placedTiles).length === 0) return false;
@@ -3220,6 +3229,8 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
           </button>
           <button 
             onClick={() => {
+              setCelebrationIndex(null);
+              setShowSuccessOverlay(false);
               onRegenerate();
               setIsMobileMenuOpen(false);
             }}
@@ -3260,6 +3271,8 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
               <button 
                 onClick={() => {
                   setCheckStatus('idle');
+                  setCelebrationIndex(null);
+                  setShowSuccessOverlay(false);
                   onRegenerate();
                 }}
                 className="w-full py-3 bg-ink hover:bg-ink-dark text-parchment font-semibold rounded-sm transition-colors shadow-sm flex items-center justify-center gap-2"
