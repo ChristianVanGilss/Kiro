@@ -45,7 +45,8 @@ import {
   TreePine,
   Wind,
   Sparkles,
-  Flag
+  Flag,
+  Clipboard
 } from 'lucide-react';
 import { generatePuzzle, CellData, Point, PuzzleData } from './generator';
 import confetti from 'canvas-confetti';
@@ -2090,6 +2091,7 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
   const [checkStatus, setCheckStatus] = useState<'idle' | 'correct' | 'incorrect'>('idle');
   const [isPencilMode, setIsPencilMode] = useState(false);
   const [isHintMode, setIsHintMode] = useState(false);
+  const [hintsUsed, setHintsUsed] = useState(0);
   const [hintFeedback, setHintFeedback] = useState<{id: string, status: 'correct' | 'incorrect'} | null>(null);
   const [highlightedCell, setHighlightedCell] = useState<{r: number, c: number} | null>(null);
   const [incorrectCells, setIncorrectCells] = useState<{r: number, c: number}[]>([]);
@@ -2507,7 +2509,23 @@ function PlayMissionScreen({ selectedTier, rowLabels, colLabels, itemLabels, sec
               </div>
               <h3 className="font-serif text-2xl font-bold text-ink mb-2">Mission Accomplished</h3>
               <p className="text-sm text-ink/70 mb-2">You have successfully deduced the Serpent's Path and placed all relics and secret rooms correctly.</p>
+              <div className="text-left text-xs text-ink/60 mb-4 space-y-1">
+                <p>Mission ID: {seedInput}</p>
+                <p>Order Revealed: {isOrderRevealed ? 'Yes' : 'No'}</p>
+              </div>
               <p className="text-sm font-bold text-crimson mb-6">Time: {formatTime(timer)}</p>
+              <button 
+                onClick={() => {
+                  const summary = `Mission ID: ${seedInput}\nTime: ${formatTime(timer)}\nOrder Revealed: ${isOrderRevealed ? 'Yes' : 'No'}`;
+                  navigator.clipboard.writeText(summary);
+                  setToastMessage("Summary copied to clipboard!");
+                  setTimeout(() => setToastMessage(null), 3000);
+                }}
+                className="w-full py-2 mb-2 bg-ink/10 text-ink font-semibold rounded-sm hover:bg-ink/20 transition-colors shadow-sm flex items-center justify-center gap-2 text-xs"
+              >
+                <Clipboard className="w-3 h-3" />
+                Copy Mission Summary
+              </button>
               <button 
                 onClick={() => {
                   setCheckStatus('idle');
@@ -2772,6 +2790,7 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
   const [checkStatus, setCheckStatus] = useState<'idle' | 'correct' | 'incorrect'>('idle');
   const [isPencilMode, setIsPencilMode] = useState(false);
   const [isHintMode, setIsHintMode] = useState(false);
+  const [hintsUsed, setHintsUsed] = useState(0);
   const [hintFeedback, setHintFeedback] = useState<{id: string, status: 'correct' | 'incorrect'} | null>(null);
   const [pencilMarks, setPencilMarks] = useState<Record<string, string[]>>({});
   const [selectedTileForMove, setSelectedTileForMove] = useState<string | null>(null);
@@ -3220,7 +3239,23 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
             </div>
             <h3 className="font-serif text-2xl font-bold text-ink mb-2">Mission Accomplished</h3>
             <p className="text-sm text-ink/70 mb-2">You have successfully deduced the Serpent's Path and placed all relics and secret rooms correctly.</p>
+            <div className="text-left text-xs text-ink/60 mb-4 space-y-1">
+              <p>Mission ID: {seedInput}</p>
+              <p>Order Revealed: {isOrderRevealed ? 'Yes' : 'No'}</p>
+            </div>
             <p className="text-sm font-bold text-crimson mb-6">Time: {formatTime(timer)}</p>
+            <button 
+              onClick={() => {
+                const summary = `Mission ID: ${seedInput}\nTime: ${formatTime(timer)}\nOrder Revealed: ${isOrderRevealed ? 'Yes' : 'No'}`;
+                navigator.clipboard.writeText(summary);
+                setToastMessage("Summary copied to clipboard!");
+                setTimeout(() => setToastMessage(null), 3000);
+              }}
+              className="w-full py-2 mb-2 bg-ink/10 text-ink font-semibold rounded-sm hover:bg-ink/20 transition-colors shadow-sm flex items-center justify-center gap-2 text-xs"
+            >
+              <Clipboard className="w-3 h-3" />
+              Copy Mission Summary
+            </button>
             <div className="space-y-3">
               <button 
                 onClick={() => {
