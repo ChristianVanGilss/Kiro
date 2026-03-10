@@ -507,6 +507,18 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
       ]
     },
     {
+      title: "The Archive Interface",
+      text: "Master the tools at your disposal. The interface is divided into three essential scrolls at the bottom of your screen:",
+      rules: [
+        "Mission: Read the story and see the Sacred Order of relics you must collect. You must find them in this exact sequence!",
+        "Tiles: Your inventory of relics, secret rooms, and path fragments. Drag them onto the board or tap to select and place.",
+        "Clues: The Archive Fragments containing the logic. Cross them out as you solve them to stay organized.",
+        "Tools: Use the Pencil (bottom right) to mark deductions and the Lightbulb for a divine hint if you are stuck."
+      ],
+      instruction: "Switch between tabs frequently to combine all pieces of the puzzle.",
+      board: []
+    },
+    {
       title: "The Archive Index",
       text: "Familiarize yourself with the sacred symbols of Kiro Fort. Each icon represents a vital element of your mission.",
       isIndex: true,
@@ -779,7 +791,18 @@ export default function App() {
   // Check for designer mode via URL parameter
   const isDesigner = new URLSearchParams(window.location.search).get('mode') === 'designer';
 
-  const [activeTab, setActiveTab] = useState<Tab>(isDesigner ? 'tutorial' : 'mobilePlay');
+  // Onboarding: Show tutorial first if not seen before
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (isDesigner) return 'tutorial';
+    const hasSeenTutorial = localStorage.getItem('kiro_has_seen_tutorial');
+    return hasSeenTutorial ? 'mobilePlay' : 'tutorial';
+  });
+
+  const completeTutorial = () => {
+    localStorage.setItem('kiro_has_seen_tutorial', 'true');
+    setActiveTab(isDesigner ? 'mission' : 'mobilePlay');
+  };
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [checkedClues, setCheckedClues] = useState<Record<string, boolean>>({});
 
@@ -951,7 +974,7 @@ export default function App() {
           />
         )}
         {activeTab === 'tutorial' ? (
-          <TutorialScreen onStart={() => setActiveTab(isDesigner ? 'mission' : 'mobilePlay')} />
+          <TutorialScreen onStart={completeTutorial} />
         ) : activeTab === 'feedback' ? (
           <FeedbackPage onBack={() => setActiveTab(isDesigner ? 'mission' : 'mobilePlay')} />
         ) : activeTab === 'mission' ? (
@@ -2753,6 +2776,13 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
   const [pencilMarks, setPencilMarks] = useState<Record<string, string[]>>({});
   const [selectedTileForMove, setSelectedTileForMove] = useState<string | null>(null);
   const [bottomTab, setBottomTab] = useState<'tiles' | 'clues' | 'story'>('tiles');
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(['tiles']));
+  
+  const handleTabChange = (tab: 'tiles' | 'clues' | 'story') => {
+    setBottomTab(tab);
+    setVisitedTabs(prev => new Set([...prev, tab]));
+  };
+
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [incorrectCells, setIncorrectCells] = useState<{r: number, c: number}[]>([]);
@@ -3136,6 +3166,13 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
         </div>
         
         <div className="flex items-center gap-2">
+          <button 
+            onClick={() => onNavigate('tutorial')}
+            className="flex items-center gap-1.5 bg-gold/10 px-2 py-1 rounded-sm border border-gold/20 text-gold hover:bg-gold/20 transition-colors"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest">How to Play</span>
+          </button>
           <div className="flex items-center gap-1.5 bg-ink/5 px-2 py-1 rounded-sm border border-ink/10">
             <Hourglass className={`w-3.5 h-3.5 ${isTimerRunning ? 'text-crimson animate-pulse' : 'text-ink/50'}`} />
             <span className="font-mono font-bold text-ink text-sm">{formatTime(timer)}</span>
@@ -3373,22 +3410,28 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
       <div className="flex items-center border-b border-ink/10 bg-parchment shrink-0 shadow-sm z-10 px-2">
         <div className="flex flex-1">
           <button 
-            onClick={() => setBottomTab('story')}
-            className={`flex-1 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors ${bottomTab === 'story' ? 'text-crimson border-b-2 border-crimson bg-ink/5' : 'text-ink/50 hover:text-ink/80 hover:bg-ink/5'}`}
+            onClick={() => handleTabChange('story')}
+            className={`flex-1 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors relative ${bottomTab === 'story' ? 'text-crimson border-b-2 border-crimson bg-ink/5' : 'text-ink/50 hover:text-ink/80 hover:bg-ink/5'}`}
           >
             Mission
+            {!visitedTabs.has('story') && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-crimson rounded-full animate-pulse"></span>
+            )}
           </button>
           <button 
-            onClick={() => setBottomTab('tiles')}
-            className={`flex-1 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors ${bottomTab === 'tiles' ? 'text-crimson border-b-2 border-crimson bg-ink/5' : 'text-ink/50 hover:text-ink/80 hover:bg-ink/5'}`}
+            onClick={() => handleTabChange('tiles')}
+            className={`flex-1 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors relative ${bottomTab === 'tiles' ? 'text-crimson border-b-2 border-crimson bg-ink/5' : 'text-ink/50 hover:text-ink/80 hover:bg-ink/5'}`}
           >
             Tiles
           </button>
           <button 
-            onClick={() => setBottomTab('clues')}
-            className={`flex-1 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors ${bottomTab === 'clues' ? 'text-crimson border-b-2 border-crimson bg-ink/5' : 'text-ink/50 hover:text-ink/80 hover:bg-ink/5'}`}
+            onClick={() => handleTabChange('clues')}
+            className={`flex-1 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors relative ${bottomTab === 'clues' ? 'text-crimson border-b-2 border-crimson bg-ink/5' : 'text-ink/50 hover:text-ink/80 hover:bg-ink/5'}`}
           >
             Clues
+            {!visitedTabs.has('clues') && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-crimson rounded-full animate-pulse"></span>
+            )}
           </button>
         </div>
       </div>
