@@ -644,7 +644,7 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
           {/* Right: Board Visualization */}
           <div className="flex justify-center">
             {currentStep.isIndex ? (
-              <div className="max-w-md w-full grid grid-cols-3 gap-4 p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111]">
+              <div className="max-w-md w-full grid grid-cols-3 gap-4 p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111] transform -rotate-2 hover:rotate-0 transition-transform duration-700">
                 <div className="flex flex-col items-center gap-2 p-3 bg-white/5 rounded-sm border border-white/10">
                   <div className="w-12 h-12 bg-[#8b0000] rounded-sm flex items-center justify-center border border-[#5a0000] shadow-lg">
                     <MapPin className="w-8 h-8 text-[#d4af37]" />
@@ -673,7 +673,7 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
                 ))}
               </div>
             ) : currentStep.isWeatherIndex ? (
-              <div className="max-w-md w-full grid grid-cols-3 gap-4 p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111]">
+              <div className="max-w-md w-full grid grid-cols-3 gap-4 p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111] transform rotate-2 hover:rotate-0 transition-transform duration-700">
                 {ROW_LABELS.map((label) => {
                   const Icon = WEATHER_ICONS_MAP[label];
                   return (
@@ -687,7 +687,7 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
                 })}
               </div>
             ) : currentStep.isAnimalIndex ? (
-              <div className="max-w-md w-full grid grid-cols-3 gap-4 p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111]">
+              <div className="max-w-md w-full grid grid-cols-3 gap-4 p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111] transform -rotate-1 hover:rotate-0 transition-transform duration-700">
                 {COL_LABELS.map((label) => {
                   const Icon = ANIMAL_ICONS_MAP[label];
                   return (
@@ -701,7 +701,7 @@ function TutorialScreen({ onStart }: { onStart: () => void }) {
                 })}
               </div>
             ) : (
-              <div className="relative p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111] transform rotate-1 hover:rotate-0 transition-transform duration-700">
+              <div className="relative p-6 bg-[#2c241b] rounded-sm shadow-2xl border-4 border-[#111] transform rotate-3 hover:rotate-0 transition-transform duration-700">
               {/* Wooden board texture */}
               <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent 0px, transparent 20px, rgba(0,0,0,0.1) 20px, rgba(0,0,0,0.1) 22px)' }}></div>
               
