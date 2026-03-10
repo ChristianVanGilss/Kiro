@@ -3191,16 +3191,6 @@ function MobilePlayScreen({ selectedTier, rowLabels, colLabels, itemLabels, secr
         <div className="absolute top-14 left-0 right-0 bg-parchment border-b border-ink/10 shadow-lg z-40 p-4 flex flex-col gap-3 animate-in slide-in-from-top-2">
           <button 
             onClick={() => {
-              onNavigate('tutorial');
-              setIsMobileMenuOpen(false);
-            }}
-            className="flex items-center gap-3 px-4 py-3 bg-gold/10 rounded-sm text-sm font-bold text-ink hover:bg-gold/20 transition-colors"
-          >
-            <BookOpen className="w-4 h-4 text-gold" />
-            The Legend (Tutorial)
-          </button>
-          <button 
-            onClick={() => {
               onNavigate('feedback');
               setIsMobileMenuOpen(false);
             }}
